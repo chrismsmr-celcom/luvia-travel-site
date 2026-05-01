@@ -887,8 +887,22 @@ function getPackages() {
         }
         if(!is_array($hotelImagesTerrasse)) $hotelImagesTerrasse = [];
         
+        // Récupérer l'ID - utiliser celui de la base de données
+        $packageId = $item['id'] ?? null;
+        
+        // Si l'ID est vide ou null, le générer selon ta convention
+        if(empty($packageId)) {
+            // Générer un ID selon la convention: #LUVT-DESTINATION-PAYS-PRIX-XXX
+            $destination = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $item['destination'] ?? 'UNKNOWN'), 0, 15));
+            $countryCode = $this->extractCountryCodeFromDestination($item['destination'] ?? '');
+            $price = intval($item['prix_total'] ?? 0);
+            $count = 1;
+            
+            $packageId = '#LUVT-' . $destination . '-' . $countryCode . '-' . $price . '-' . str_pad($count, 2, '0', STR_PAD_LEFT);
+        }
+        
         $formatted[] = [
-            'id' => $item['id'] ?? 'PKG-' . strtoupper(substr(uniqid(), -8)),
+            'id' => $packageId,
             'name' => $item['nom'] ?? 'Package sans nom',
             'destination' => $item['destination'] ?? '',
             'duration_nights' => intval($item['duree_nuits'] ?? 0),
@@ -924,12 +938,37 @@ function getPackages() {
             'activity2_description' => $item['activite2_description'] ?? '',
             'activity3_name' => $item['activite3_nom'] ?? '',
             'activity3_price' => floatval($item['activite3_prix'] ?? 0),
-            'activity3_description' => $item['activite3_description'] ?? ''
+            'activity3_description' => $item['activite3_description'] ?? '',
+            'activite4_nom' => $item['activite4_nom'] ?? '',
+            'activite4_prix' => floatval($item['activite4_prix'] ?? 0),
+            'activite4_description' => $item['activite4_description'] ?? '',
+            'activite4_image' => $item['activite4_image'] ?? '',
         ];
     }
+    
+    error_log("getPackages() retourne " . count($formatted) . " packages");
     return $formatted;
 }
 
+// Fonction helper pour extraire le code pays depuis la destination
+function extractCountryCodeFromDestination($destination) {
+    $countryCodes = [
+        'Egypte' => 'EG', 'Le Caire' => 'EG',
+        'Zanzibar' => 'TZ', 'Tanzanie' => 'TZ',
+        'Dubai' => 'AE', 'Emirats Arabes Unis' => 'AE',
+        'Kinshasa' => 'CD', 'RDC' => 'CD', 'Congo' => 'CD',
+        'Paris' => 'FR', 'France' => 'FR',
+        'New York' => 'US', 'USA' => 'US',
+        'Londres' => 'GB', 'London' => 'GB',
+    ];
+    
+    foreach($countryCodes as $key => $code) {
+        if(stripos($destination, $key) !== false) {
+            return $code;
+        }
+    }
+    return 'XX';
+}
 // ==================== SERVICE TAUX DE CHANGE ====================
 function getExchangeRates() {
     return [
