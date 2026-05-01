@@ -887,22 +887,19 @@ function getPackages() {
         }
         if(!is_array($hotelImagesTerrasse)) $hotelImagesTerrasse = [];
         
-        // Récupérer l'ID - utiliser celui de la base de données
+        // ✅ Utiliser UNIQUEMENT l'ID de Supabase
+        // Si l'ID est vide ou null, on log une erreur mais on ne génère pas d'ID
         $packageId = $item['id'] ?? null;
         
-        // Si l'ID est vide ou null, le générer selon ta convention
         if(empty($packageId)) {
-            // Générer un ID selon la convention: #LUVT-DESTINATION-PAYS-PRIX-XXX
-            $destination = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $item['destination'] ?? 'UNKNOWN'), 0, 15));
-            $countryCode = $this->extractCountryCodeFromDestination($item['destination'] ?? '');
-            $price = intval($item['prix_total'] ?? 0);
-            $count = 1;
-            
-            $packageId = '#LUVT-' . $destination . '-' . $countryCode . '-' . $price . '-' . str_pad($count, 2, '0', STR_PAD_LEFT);
+            // ⚠️ Log d'erreur car un package sans ID ne devrait pas exister
+            error_log("ERREUR: Package sans ID dans Supabase: " . print_r($item, true));
+            // On ignore ce package ou on met un ID temporaire
+            continue; // Ou $packageId = 'MISSING_ID_' . uniqid();
         }
         
         $formatted[] = [
-            'id' => $packageId,
+            'id' => $packageId,  // ← ID original de Supabase
             'name' => $item['nom'] ?? 'Package sans nom',
             'destination' => $item['destination'] ?? '',
             'duration_nights' => intval($item['duree_nuits'] ?? 0),
@@ -950,25 +947,6 @@ function getPackages() {
     return $formatted;
 }
 
-// Fonction helper pour extraire le code pays depuis la destination
-function extractCountryCodeFromDestination($destination) {
-    $countryCodes = [
-        'Egypte' => 'EG', 'Le Caire' => 'EG',
-        'Zanzibar' => 'TZ', 'Tanzanie' => 'TZ',
-        'Dubai' => 'AE', 'Emirats Arabes Unis' => 'AE',
-        'Kinshasa' => 'CD', 'RDC' => 'CD', 'Congo' => 'CD',
-        'Paris' => 'FR', 'France' => 'FR',
-        'New York' => 'US', 'USA' => 'US',
-        'Londres' => 'GB', 'London' => 'GB',
-    ];
-    
-    foreach($countryCodes as $key => $code) {
-        if(stripos($destination, $key) !== false) {
-            return $code;
-        }
-    }
-    return 'XX';
-}
 // ==================== SERVICE TAUX DE CHANGE ====================
 function getExchangeRates() {
     return [
