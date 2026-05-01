@@ -250,8 +250,6 @@ function liteAPIRequest($url, $method = 'GET', $data = null) {
 }
 // ==================== SERVICE HOTELS ====================
 
-// ==================== SERVICE HOTELS ====================
-
 function getCountryCodeFromCity($city) {
     $url = "https://nominatim.openstreetmap.org/search?q=" . urlencode($city) . "&format=json&limit=1&addressdetails=1";
     
@@ -275,8 +273,8 @@ function getCountryCodeFromCity($city) {
     return 'FR';
 }
 
-// RECHERCHE PRINCIPALE - Version optimisée avec limite 200
-function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenAges = [], $guestNationality = null) {
+// RECHERCHE PRINCIPALE - Version optimisée avec limite dynamique
+function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenAges = [], $guestNationality = null, $currency = 'USD') {
     global $liteapi_search_base_url;
 
     $city = trim((string) $city);
@@ -292,25 +290,46 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
 
     $occupancy = ['adults' => max(1, (int)$adults)];
     if (!empty($childrenAges) && is_array($childrenAges)) {
-        $occupancy['children'] = array_values(array_filter(array_map('intval', $childrenAges)));
+        // Garder les âges y compris 0 (bébés)
+        $filteredAges = [];
+        foreach ($childrenAges as $age) {
+            $ageInt = intval($age);
+            if ($ageInt >= 0 && $ageInt <= 17) {
+                $filteredAges[] = $ageInt;
+            }
+        }
+        if (!empty($filteredAges)) {
+            $occupancy['children'] = $filteredAges;
+        }
     }
 
-    // ÉTAPE 1: Récupérer les hôtels depuis Data API - LIMITE 200 (max 500)
+    // ÉTAPE 1: Récupérer les hôtels depuis Data API - LIMITE 500 (performance)
     $hotelsData = getHotelsFromDataAPI($countryCode, $city, 500);
     if (empty($hotelsData)) return [];
     
-    // ÉTAPE 2: Récupérer les prix et disponibilités
+    // ÉTAPE 2: Récupérer les prix et disponibilités (par lots pour éviter timeout)
     $hotelIds = array_column($hotelsData, 'id');
-    $ratesData = getRatesForHotels($hotelIds, $checkInFormatted, $checkOutFormatted, $occupancy, $guestNationality);
-    if (empty($ratesData)) return [];
+    $allRatesData = [];
+    
+    // Traiter par lots de 100 pour éviter les timeouts
+    $chunks = array_chunk($hotelIds, 100);
+    foreach ($chunks as $chunk) {
+        $ratesData = getRatesForHotels($chunk, $checkInFormatted, $checkOutFormatted, $occupancy, $guestNationality, $currency);
+        $allRatesData = array_merge($allRatesData, $ratesData);
+        if (count($chunks) > 1) {
+            usleep(100000); // Pause 0.1s entre les lots
+        }
+    }
+    
+    if (empty($allRatesData)) return [];
 
     // ÉTAPE 3: Fusionner les données
     $results = [];
     foreach ($hotelsData as $hotel) {
         $hotelId = $hotel['id'];
-        if (!isset($ratesData[$hotelId])) continue;
+        if (!isset($allRatesData[$hotelId])) continue;
         
-        $rate = $ratesData[$hotelId];
+        $rate = $allRatesData[$hotelId];
         
         $results[] = [
             'id' => $hotelId,
@@ -345,53 +364,72 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
 function getHotelsFromDataAPI($countryCode, $cityName, $limit = 500) {
     global $liteapi_search_base_url;
     
-    // Limite maximale de 500 (API LiteAPI)
-    $limit = min($limit, 1000);
+    $allHotels = [];
+    $offset = 0;
+    $pageSize = min($limit, 200); // 200 par page max
     
-    $params = [
-        'countryCode' => strtoupper(trim($countryCode)),
-        'cityName' => trim($cityName),
-        'limit' => $limit,
-        'language' => 'fr',
-    ];
-
-    $url = rtrim($liteapi_search_base_url, '/') . '/data/hotels?' . http_build_query($params);
-    
-    $response = liteAPIRequest($url, 'GET');
-    
-    if (!empty($response['error'])) return [];
-    
-    $rows = $response['data'] ?? [];
-    if (!is_array($rows) || empty($rows)) return [];
-
-    $hotels = [];
-    foreach ($rows as $hotel) {
-        $hotelId = $hotel['hotelId'] ?? ($hotel['id'] ?? null);
-        if (!$hotelId) continue;
+    while ($offset < $limit) {
+        $currentLimit = min($pageSize, $limit - $offset);
         
-        $stars = 0;
-        if (isset($hotel['starRating'])) {
-            $stars = (float)$hotel['starRating'];
-        } elseif (isset($hotel['stars'])) {
-            $stars = (float)$hotel['stars'];
-        }
-
-        $hotels[] = [
-            'id' => $hotelId,
-            'name' => $hotel['name'] ?? '',
-            'address' => $hotel['address'] ?? '',
-            'stars' => $stars,
-            'rating' => $hotel['rating'] ?? 0,
-            'image' => $hotel['mainPhoto'] ?? ($hotel['main_photo'] ?? ''),
-            'city' => $hotel['cityName'] ?? ($hotel['city'] ?? $cityName)
+        $params = [
+            'countryCode' => strtoupper(trim($countryCode)),
+            'cityName' => trim($cityName),
+            'limit' => $currentLimit,
+            'offset' => $offset,
+            'language' => 'fr',
         ];
+
+        $url = rtrim($liteapi_search_base_url, '/') . '/data/hotels?' . http_build_query($params);
+        
+        $response = liteAPIRequest($url, 'GET');
+        
+        if (!empty($response['error'])) break;
+        
+        $rows = $response['data'] ?? [];
+        if (!is_array($rows) || empty($rows)) break;
+        
+        foreach ($rows as $hotel) {
+            $hotelId = $hotel['hotelId'] ?? ($hotel['id'] ?? null);
+            if (!$hotelId) continue;
+            
+            // Éviter les doublons
+            if (isset($allHotels[$hotelId])) continue;
+            
+            $stars = 0;
+            if (isset($hotel['starRating'])) {
+                $stars = (float)$hotel['starRating'];
+            } elseif (isset($hotel['stars'])) {
+                $stars = (float)$hotel['stars'];
+            }
+
+            $allHotels[$hotelId] = [
+                'id' => $hotelId,
+                'name' => $hotel['name'] ?? '',
+                'address' => $hotel['address'] ?? '',
+                'stars' => $stars,
+                'rating' => $hotel['rating'] ?? 0,
+                'image' => $hotel['mainPhoto'] ?? ($hotel['main_photo'] ?? $hotel['thumbnail'] ?? ''),
+                'city' => $hotel['cityName'] ?? ($hotel['city'] ?? $cityName)
+            ];
+        }
+        
+        $offset += $currentLimit;
+        
+        // Si on a moins de résultats que demandé, c'est fini
+        if (count($rows) < $currentLimit) break;
+        
+        // Pause pour ne pas surcharger l'API
+        if ($offset < $limit) {
+            usleep(100000); // 0.1 seconde
+        }
     }
     
-    error_log("getHotelsFromDataAPI: " . count($hotels) . " hotels found for $cityName (limit: $limit)");
-    return $hotels;
+    $results = array_values($allHotels);
+    error_log("getHotelsFromDataAPI: " . count($results) . " hotels found for $cityName");
+    return $results;
 }
 
-function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNationality) {
+function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNationality, $currency = 'USD') {
     global $liteapi_search_base_url;
     
     if (empty($hotelIds)) return [];
@@ -400,11 +438,11 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
         'hotelIds' => $hotelIds,
         'checkin' => $checkIn,
         'checkout' => $checkOut,
-        'currency' => 'USD',
+        'currency' => strtoupper($currency),
         'guestNationality' => strtoupper($guestNationality),
         'occupancies' => [$occupancy],
-        'includeHotelData' => true,
         'maxRatesPerHotel' => 20
+        // includeHotelData retiré pour performance (déjà récupéré via Data API)
     ];
 
     $url = rtrim($liteapi_search_base_url, '/') . '/hotels/rates';
@@ -450,13 +488,6 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
                 }
             }
             
-            if (isset($roomType['media']) && is_array($roomType['media'])) {
-                foreach ($roomType['media'] as $img) {
-                    $url = $img['url'] ?? $img['source'] ?? '';
-                    if (!empty($url)) $roomImages[] = $url;
-                }
-            }
-            
             foreach (($roomType['rates'] ?? []) as $rate) {
                 $totalAmount = null;
                 if (isset($rate['retailRate']['total'][0]['amount'])) {
@@ -479,9 +510,8 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
                     }
                     
                     $isRefundable = false;
-                    if (isset($rate['cancellationPolicies']['refundableTag'])) {
-                        $isRefundable = $rate['cancellationPolicies']['refundableTag'] === 'RFN';
-                    }
+                    $refundableTag = $rate['cancellationPolicies']['refundableTag'] ?? '';
+                    $isRefundable = $refundableTag === 'RFN';
                     
                     $maxOccupancy = $rate['maxOccupancy'] ?? 2;
                     
@@ -537,6 +567,72 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
     }
     
     error_log("getRatesForHotels: Rates found for " . count($rates) . " hotels");
+    return $rates;
+}
+
+// ==================== VERSION OPTIMISÉE POUR LISTE (MIN RATES) ====================
+function getMinRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNationality, $currency = 'USD') {
+    global $liteapi_search_base_url;
+    
+    if (empty($hotelIds)) return [];
+    
+    // Limiter à 200 pour la recherche de prix minimum (plus rapide)
+    $hotelIds = array_slice($hotelIds, 0, 200);
+    
+    $payload = [
+        'hotelIds' => $hotelIds,
+        'checkin' => $checkIn,
+        'checkout' => $checkOut,
+        'currency' => strtoupper($currency),
+        'guestNationality' => strtoupper($guestNationality),
+        'occupancies' => [$occupancy]
+    ];
+
+    $url = rtrim($liteapi_search_base_url, '/') . '/hotels/min-rates';
+    
+    $response = liteAPIRequest($url, 'POST', $payload);
+    
+    if (!empty($response['error'])) return [];
+    
+    $items = $response['data'] ?? [];
+    if (!is_array($items) || empty($items)) return [];
+
+    $nights = (strtotime($checkOut) - strtotime($checkIn)) / 86400;
+    $nights = max(1, (int)$nights);
+    
+    $rates = [];
+    foreach ($items as $item) {
+        $hotelId = $item['hotelId'] ?? null;
+        if (!$hotelId) continue;
+        
+        $minPrice = null;
+        $minOfferId = null;
+        $minRoomName = null;
+        
+        foreach (($item['roomTypes'] ?? []) as $roomType) {
+            foreach (($roomType['rates'] ?? []) as $rate) {
+                // Structure différente pour min-rates
+                $amount = $rate['rate']['amount'] ?? $rate['total']['amount'] ?? null;
+                if ($amount && ($minPrice === null || $amount < $minPrice)) {
+                    $minPrice = (float)$amount;
+                    $minOfferId = $rate['offerId'] ?? null;
+                    $minRoomName = $rate['name'] ?? $roomType['name'] ?? 'Chambre';
+                }
+            }
+        }
+        
+        if ($minPrice !== null) {
+            $rates[$hotelId] = [
+                'price_per_night' => round($minPrice / $nights, 2),
+                'total_price' => $minPrice,
+                'nights' => $nights,
+                'offer_id' => $minOfferId,
+                'room_name' => $minRoomName
+            ];
+        }
+    }
+    
+    error_log("getMinRatesForHotels: " . count($rates) . " hotels with min rates");
     return $rates;
 }
 
@@ -675,6 +771,7 @@ function getHotelDetails($hotelId) {
     return $details;
 }
 
+// ==================== PREBOOK & BOOK ====================
 function prebookRate($offerId, $usePaymentSdk = false) {
     global $liteapi_booking_base_url;
     $url = rtrim($liteapi_booking_base_url, '/') . '/rates/prebook';
