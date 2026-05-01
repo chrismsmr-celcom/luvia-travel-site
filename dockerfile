@@ -1,25 +1,24 @@
-FROM php:8.2-fpm
+FROM php:8.2-apache
 
-# Installer nginx
-RUN apt-get update && apt-get install -y nginx \
-    && docker-php-ext-install pdo_mysql mysqli \
-    && apt-get clean
+# Installer les extensions PHP
+RUN docker-php-ext-install pdo_mysql mysqli
 
-# Configurer PHP-FPM
-RUN echo "listen = 9000" >> /usr/local/etc/php-fpm.d/zz-docker.conf
+# Activer mod_rewrite
+RUN a2enmod rewrite
 
-# Configurer Nginx
-COPY nginx.conf /etc/nginx/sites-available/default
+# Définir le répertoire de travail
+WORKDIR /var/www/html
 
 # Copier les fichiers
-WORKDIR /var/www/html
 COPY . /var/www/html/
 
-# Script de démarrage
-RUN echo '#!/bin/bash\n\
-php-fpm -D\n\
-nginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
+# Donner les permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
+
+# Pas besoin de configurer manuellement Apache !
+# La configuration par défaut fonctionne très bien
 
 EXPOSE 80
 
-CMD ["/start.sh"]
+CMD ["apache2-foreground"]
