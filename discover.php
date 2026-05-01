@@ -17,7 +17,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Kinshasa -->
                 <div class="group relative overflow-hidden rounded-2xl shadow-lg">
-                    <img src="https://images.unsplash.com/photo-1586155089650-223a1cee863f?w=800" alt="Kinshasa" class="w-full h-96 object-cover group-hover:scale-110 transition duration-500">
+                    <img src="https://images.unsplash.com/photo-1729006122953-e3cafd3dd875?q=80&w=735" alt="Kinshasa" class="w-full h-96 object-cover group-hover:scale-110 transition duration-500">
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-6 text-white">
                         <h3 class="text-2xl font-bold mb-2">Kinshasa</h3>
@@ -41,7 +41,7 @@
                 
                 <!-- Virunga -->
                 <div class="group relative overflow-hidden rounded-2xl shadow-lg">
-                    <img src="https://images.unsplash.com/photo-1587560558833-7ac51f8a1d5e?w=800" alt="Parc des Virunga" class="w-full h-96 object-cover group-hover:scale-110 transition duration-500">
+                    <img src="https://images.unsplash.com/photo-1579774554263-a67b8732d464?q=80&w=1074" alt="Parc des Virunga" class="w-full h-96 object-cover group-hover:scale-110 transition duration-500">
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-6 text-white">
                         <h3 class="text-2xl font-bold mb-2">Parc des Virunga</h3>
@@ -65,7 +65,7 @@
                 
                 <!-- Lubumbashi -->
                 <div class="group relative overflow-hidden rounded-2xl shadow-lg">
-                    <img src="https://images.unsplash.com/photo-1592548099124-d792be00dd47?w=800" alt="Lubumbashi" class="w-full h-96 object-cover group-hover:scale-110 transition duration-500">
+                    <img src="https://images.unsplash.com/photo-1568720575666-84231057a1e2?q=80&w=1170" alt="Lubumbashi" class="w-full h-96 object-cover group-hover:scale-110 transition duration-500">
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-6 text-white">
                         <h3 class="text-2xl font-bold mb-2">Lubumbashi</h3>
@@ -89,7 +89,7 @@
                 
                 <!-- Goma -->
                 <div class="group relative overflow-hidden rounded-2xl shadow-lg">
-                    <img src="https://images.unsplash.com/photo-1583836455320-a8dd6d6e0dec?w=800" alt="Goma" class="w-full h-96 object-cover group-hover:scale-110 transition duration-500">
+                    <img src="https://pin.it/1b3LSwKTO" alt="Goma" class="w-full h-96 object-cover group-hover:scale-110 transition duration-500">
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-6 text-white">
                         <h3 class="text-2xl font-bold mb-2">Goma</h3>
