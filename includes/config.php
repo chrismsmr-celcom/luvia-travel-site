@@ -296,7 +296,7 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
     }
 
     // ÉTAPE 1: Récupérer les hôtels depuis Data API - LIMITE 200 (max 500)
-    $hotelsData = getHotelsFromDataAPI($countryCode, $city, 200);
+    $hotelsData = getHotelsFromDataAPI($countryCode, $city, 500);
     if (empty($hotelsData)) return [];
     
     // ÉTAPE 2: Récupérer les prix et disponibilités
@@ -342,11 +342,11 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
     return $results;
 }
 
-function getHotelsFromDataAPI($countryCode, $cityName, $limit = 200) {
+function getHotelsFromDataAPI($countryCode, $cityName, $limit = 500) {
     global $liteapi_search_base_url;
     
     // Limite maximale de 500 (API LiteAPI)
-    $limit = min($limit, 500);
+    $limit = min($limit, 1000);
     
     $params = [
         'countryCode' => strtoupper(trim($countryCode)),
