@@ -250,6 +250,8 @@ function liteAPIRequest($url, $method = 'GET', $data = null) {
 }
 // ==================== SERVICE HOTELS ====================
 
+// ==================== SERVICE HOTELS ====================
+
 function getCountryCodeFromCity($city) {
     $url = "https://nominatim.openstreetmap.org/search?q=" . urlencode($city) . "&format=json&limit=1&addressdetails=1";
     
@@ -264,7 +266,6 @@ function getCountryCodeFromCity($city) {
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     
-    
     if ($httpCode === 200 && $response) {
         $data = json_decode($response, true);
         if (isset($data[0]['address']['country_code'])) {
@@ -274,7 +275,7 @@ function getCountryCodeFromCity($city) {
     return 'FR';
 }
 
-// RECHERCHE PRINCIPALE - Version optimisée (sans appels multiples à /data/hotel)
+// RECHERCHE PRINCIPALE - Version optimisée avec limite 200
 function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenAges = [], $guestNationality = null) {
     global $liteapi_search_base_url;
 
@@ -294,7 +295,7 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
         $occupancy['children'] = array_values(array_filter(array_map('intval', $childrenAges)));
     }
 
-    // ÉTAPE 1: Récupérer les hôtels depuis Data API (avec photos principales)
+    // ÉTAPE 1: Récupérer les hôtels depuis Data API - LIMITE 200 (max 500)
     $hotelsData = getHotelsFromDataAPI($countryCode, $city, 200);
     if (empty($hotelsData)) return [];
     
@@ -303,7 +304,7 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
     $ratesData = getRatesForHotels($hotelIds, $checkInFormatted, $checkOutFormatted, $occupancy, $guestNationality);
     if (empty($ratesData)) return [];
 
-    // ÉTAPE 3: Fusionner les données (SANS appeler getHotelImages ici - trop lent)
+    // ÉTAPE 3: Fusionner les données
     $results = [];
     foreach ($hotelsData as $hotel) {
         $hotelId = $hotel['id'];
@@ -320,8 +321,8 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
             'price_total_usd' => $rate['total_price'],
             'nights' => $nights,
             'rating' => $hotel['rating'],
-            'hotel_stars' => (float)$hotel['stars'],  // Garder en float
-            'image' => $hotel['image'],  // Image principale depuis Data API
+            'hotel_stars' => (float)$hotel['stars'],
+            'image' => $hotel['image'],
             'offer_id' => $rate['offer_id'],
             'room_name' => $rate['room_name'],
             'country_code' => $countryCode,
@@ -329,7 +330,7 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
             'board_name' => $rate['board_name'],
             'breakfast_included' => $rate['breakfast_included'],
             'perks' => $rate['perks'],
-            'all_rates' => $rate['all_rates']  // Chambres sans images (images chargées au clic)
+            'all_rates' => $rate['all_rates']
         ];
     }
 
@@ -337,16 +338,20 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
         return $a['price_usd'] <=> $b['price_usd'];
     });
 
+    error_log("searchHotelsLiteAPI: " . count($results) . " hotels found for $city");
     return $results;
 }
 
 function getHotelsFromDataAPI($countryCode, $cityName, $limit = 200) {
     global $liteapi_search_base_url;
     
+    // Limite maximale de 500 (API LiteAPI)
+    $limit = min($limit, 500);
+    
     $params = [
         'countryCode' => strtoupper(trim($countryCode)),
         'cityName' => trim($cityName),
-        'limit' => min($limit, 500),
+        'limit' => $limit,
         'language' => 'fr',
     ];
 
@@ -382,6 +387,7 @@ function getHotelsFromDataAPI($countryCode, $cityName, $limit = 200) {
         ];
     }
     
+    error_log("getHotelsFromDataAPI: " . count($hotels) . " hotels found for $cityName (limit: $limit)");
     return $hotels;
 }
 
@@ -403,9 +409,7 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
 
     $url = rtrim($liteapi_search_base_url, '/') . '/hotels/rates';
     
-    $items = $response['data'] ?? [];
-    error_log("DEBUG ROOM IMAGES: " . json_encode($items[0]['roomTypes'][0]['images'] ?? 'AUCUNE IMAGE DANS LE JSON'));
-
+    $response = liteAPIRequest($url, 'POST', $payload);
     
     if (!empty($response['error'])) {
         error_log("Rates API Error: " . json_encode($response));
@@ -432,7 +436,6 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
             // Récupération des images de la chambre
             $roomImages = [];
             
-            // Vérifier plusieurs sources possibles pour les images
             if (isset($roomType['images']) && is_array($roomType['images'])) {
                 foreach ($roomType['images'] as $img) {
                     $url = $img['url'] ?? $img['main_photo'] ?? $img['thumbnail'] ?? '';
@@ -503,7 +506,7 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
                         'refundable' => $isRefundable,
                         'bed_type' => $bedType,
                         'description' => $rate['description'] ?? $roomType['description'] ?? '',
-                        'images' => $roomImages  // ← LES VRAIES IMAGES DE LA CHAMBRE
+                        'images' => $roomImages
                     ];
                     
                     $allRates[] = $roomData;
@@ -533,12 +536,11 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
         }
     }
     
-    error_log("Rates found for " . count($rates) . " hotels");
+    error_log("getRatesForHotels: Rates found for " . count($rates) . " hotels");
     return $rates;
 }
-// ==================== RÉCUPÉRATION DES IMAGES DE L'HÔTEL (POUR LE MODAL SEULEMENT) ====================
-// ⚠️ IMPORTANT: Cette fonction n'est appelée que lorsqu'on clique sur un hôtel !
-// Ne pas l'appeler dans la liste des résultats (trop lent)
+
+// ==================== RÉCUPÉRATION DES IMAGES DE L'HÔTEL ====================
 function getHotelImages($hotelId) {
     global $liteapi_search_base_url;
     
@@ -547,9 +549,6 @@ function getHotelImages($hotelId) {
     $url = rtrim($liteapi_search_base_url, '/') . "/data/hotel?hotelId=" . urlencode($hotelId) . "&language=fr";
     
     $response = liteAPIRequest($url, 'GET');
-    
-    error_log("=== HOTEL IMAGES RESPONSE for $hotelId ===");
-    error_log(json_encode($response));
     
     if (!empty($response['error'])) {
         error_log("Hotel Images API Error for $hotelId: " . ($response['message'] ?? 'Unknown'));
@@ -575,7 +574,7 @@ function getHotelImages($hotelId) {
         $images['main_photo'] = $hotelData['thumbnail'];
     }
     
-    // 🔥 Récupérer toutes les photos (chercher dans plusieurs clés possibles)
+    // Récupérer toutes les photos
     $photos = [];
     
     if (isset($hotelData['photos']) && is_array($hotelData['photos'])) {
@@ -588,10 +587,7 @@ function getHotelImages($hotelId) {
         $photos = $hotelData['gallery'];
     }
     
-    error_log("Found " . count($photos) . " photos for hotel $hotelId");
-    
     foreach ($photos as $photo) {
-        // Extraire l'URL de la photo
         $url = '';
         if (is_string($photo)) {
             $url = $photo;
@@ -612,7 +608,6 @@ function getHotelImages($hotelId) {
         if (!empty($url)) {
             $images['all_photos'][] = $url;
             
-            // Classer par type de photo
             $category = '';
             if (isset($photo['category'])) {
                 $category = strtolower($photo['category']);
@@ -622,7 +617,6 @@ function getHotelImages($hotelId) {
                 $category = strtolower(implode(' ', $photo['tags']));
             }
             
-            // Vérifier si c'est une photo de chambre
             if (strpos($category, 'room') !== false || 
                 strpos($category, 'chambre') !== false ||
                 strpos($category, 'bed') !== false ||
@@ -634,23 +628,18 @@ function getHotelImages($hotelId) {
         }
     }
     
-    // Si aucune photo de chambre n'a été trouvée, utiliser toutes les photos
     if (empty($images['room_photos']) && !empty($images['all_photos'])) {
         $images['room_photos'] = $images['all_photos'];
-        error_log("No room photos found for hotel $hotelId, using all photos instead");
     }
     
-    // Si pas de photos du tout, utiliser une image par défaut
     if (empty($images['all_photos'])) {
         $images['all_photos'] = ['https://picsum.photos/800/500?random=' . $hotelId];
         $images['room_photos'] = $images['all_photos'];
-        error_log("No photos found for hotel $hotelId, using placeholder");
     }
-    
-    error_log("Hotel $hotelId: " . count($images['room_photos']) . " room photos found");
     
     return $images;
 }
+
 // ==================== RÉCUPÉRATION DES DÉTAILS COMPLETS DE L'HÔTEL ====================
 function getHotelDetails($hotelId) {
     global $liteapi_search_base_url;
