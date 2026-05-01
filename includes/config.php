@@ -295,7 +295,7 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
     }
 
     // ÉTAPE 1: Récupérer les hôtels depuis Data API (avec photos principales)
-    $hotelsData = getHotelsFromDataAPI($countryCode, $city, 50);
+    $hotelsData = getHotelsFromDataAPI($countryCode, $city, 200);
     if (empty($hotelsData)) return [];
     
     // ÉTAPE 2: Récupérer les prix et disponibilités
@@ -340,7 +340,7 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
     return $results;
 }
 
-function getHotelsFromDataAPI($countryCode, $cityName, $limit = 50) {
+function getHotelsFromDataAPI($countryCode, $cityName, $limit = 200) {
     global $liteapi_search_base_url;
     
     $params = [
@@ -403,8 +403,9 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
 
     $url = rtrim($liteapi_search_base_url, '/') . '/hotels/rates';
     
-    $response = liteAPIRequest($url, 'POST', $payload);
+    $items = $response['data'] ?? [];
     error_log("DEBUG ROOM IMAGES: " . json_encode($items[0]['roomTypes'][0]['images'] ?? 'AUCUNE IMAGE DANS LE JSON'));
+
     
     if (!empty($response['error'])) {
         error_log("Rates API Error: " . json_encode($response));
