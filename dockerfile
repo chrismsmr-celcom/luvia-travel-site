@@ -1,32 +1,25 @@
-# Étape 1 : Utiliser l'image PHP avec Apache
-FROM php:8.2-apache
+FROM php:8.2-fpm
 
-# Étape 2 : Installer les extensions PHP nécessaires
-RUN docker-php-ext-install pdo_mysql mysqli
-RUN docker-php-ext-enable pdo_mysql
+# Installer nginx
+RUN apt-get update && apt-get install -y nginx \
+    && docker-php-ext-install pdo_mysql mysqli \
+    && apt-get clean
 
-# Étape 3 : Activer mod_rewrite d'Apache (pour les belles URLs)
-RUN a2enmod rewrite
+# Configurer PHP-FPM
+RUN echo "listen = 9000" >> /usr/local/etc/php-fpm.d/zz-docker.conf
 
-# Étape 4 : Configurer le répertoire de travail
+# Configurer Nginx
+COPY nginx.conf /etc/nginx/sites-available/default
+
+# Copier les fichiers
 WORKDIR /var/www/html
-
-# Étape 5 : Copier tous les fichiers du projet
 COPY . /var/www/html/
 
-# Étape 6 : Donner les permissions (Render utilise www-data)
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html
+# Script de démarrage
+RUN echo '#!/bin/bash\n\
+php-fpm -D\n\
+nginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
 
-# Étape 7 : Configurer Apache pour forcer le passage par index.php
-RUN echo '<Directory /var/www/html/> \
-    Options Indexes FollowSymLinks \
-    AllowOverride All \
-    Require all granted \
-    </Directory>' > /etc/apache2/sites-available/000-default.conf
-
-# Étape 8 : Exposer le port (Render utilise le port 10000 souvent)
 EXPOSE 80
 
-# Étape 9 : Démarrer Apache
-CMD ["apache2-foreground"]
+CMD ["/start.sh"]
