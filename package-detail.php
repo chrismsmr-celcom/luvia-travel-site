@@ -22,18 +22,6 @@ if (!function_exists('displayPrice')) {
     }
 }
 
-// Fonction pour sécuriser l'affichage des tableaux
-function safeArray($value) {
-    if (empty($value)) return [];
-    if (is_array($value)) return $value;
-    // Si c'est une chaîne JSON, la décoder
-    if (is_string($value) && (strpos($value, '[') === 0 || strpos($value, '{') === 0)) {
-        $decoded = json_decode($value, true);
-        if (is_array($decoded)) return $decoded;
-    }
-    return [];
-}
-
 // Récupérer l'ID du package
 $packageId = isset($_GET['id']) ? trim($_GET['id']) : '';
 if(empty($packageId)) {
@@ -45,15 +33,23 @@ if(empty($packageId)) {
 $packages = getPackages();
 $package = null;
 
+// Debug - afficher ce que retourne getPackages()
+error_log("Package ID recherché: " . $packageId);
+error_log("Nombre de packages: " . count($packages));
+
 // Chercher le package correspondant
 foreach($packages as $p) {
-    if(isset($p['id']) && ($p['id'] == $packageId || $p['id'] === $packageId)) {
+    // Comparer avec l'ID (peut être string ou int)
+    if($p['id'] == $packageId || $p['id'] === $packageId) {
         $package = $p;
+        error_log("Package trouvé: " . json_encode($package));
         break;
     }
 }
 
 if(!$package) {
+    error_log("Package non trouvé pour l'ID: " . $packageId);
+    // Afficher une erreur au lieu de rediriger pour debug
     echo "<div class='container mx-auto px-6 py-32 text-center'>";
     echo "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded'>";
     echo "<strong>Erreur:</strong> Package non trouvé pour l'ID: " . htmlspecialchars($packageId);
@@ -63,31 +59,6 @@ if(!$package) {
     require_once 'includes/footer.php';
     exit;
 }
-
-// Sécuriser les données du package
-$package['includes'] = safeArray($package['includes'] ?? []);
-$package['hotel_room_images'] = safeArray($package['hotel_room_images'] ?? []);
-$package['hotel_terrace_images'] = safeArray($package['hotel_terrace_images'] ?? []);
-$package['hotel_image'] = $package['hotel_image_exterieur'] ?? '';
-$package['image'] = $package['image_principale'] ?? '';
-$package['price'] = $package['prix_total'] ?? 0;
-$package['duration_nights'] = $package['duree_nuits'] ?? 0;
-$package['flight_price'] = $package['prix_vol'] ?? 0;
-$package['flight_class'] = $package['classe_vol'] ?? 'Economique';
-$package['visa_price'] = $package['prix_visa'] ?? 0;
-$package['hotel_price'] = $package['prix_hotel'] ?? 0;
-$package['hotel_stars'] = $package['hotel_etoiles'] ?? 0;
-$package['chambre_capacite'] = $package['chambre_capacite'] ?? 2;
-$package['transfer_price'] = $package['transfert_prix'] ?? 0;
-$package['activity1_price'] = $package['activite1_prix'] ?? 0;
-$package['activity2_price'] = $package['activite2_prix'] ?? 0;
-$package['activity3_price'] = $package['activite3_prix'] ?? 0;
-$package['activity1_name'] = $package['activite1_nom'] ?? '';
-$package['activity2_name'] = $package['activite2_nom'] ?? '';
-$package['activity3_name'] = $package['activite3_nom'] ?? '';
-$package['activity1_description'] = $package['activite1_description'] ?? '';
-$package['activity2_description'] = $package['activite2_description'] ?? '';
-$package['activity3_description'] = $package['activite3_description'] ?? '';
 ?>
 
 <section class="pt-32 pb-20 bg-gray-50">
@@ -115,7 +86,7 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                 <!-- Description -->
                 <div class="bg-white rounded-2xl shadow-lg p-6">
                     <h2 class="text-2xl font-bold mb-4">Description du voyage</h2>
-                    <p class="text-gray-600 leading-relaxed"><?php echo nl2br(htmlspecialchars($package['description'] ?? '')); ?></p>
+                    <p class="text-gray-600 leading-relaxed"><?php echo nl2br(htmlspecialchars($package['description'])); ?></p>
                 </div>
                 
                 <!-- Détails du vol -->
@@ -128,7 +99,7 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                         </div>
                         <div>
                             <p class="font-bold text-lg"><?php echo htmlspecialchars($package['airline']); ?></p>
-                            <p class="text-gray-600">Classe <?php echo htmlspecialchars($package['flight_class']); ?></p>
+                            <p class="text-gray-600">Classe <?php echo htmlspecialchars($package['flight_class'] ?? 'Economique'); ?></p>
                             <p class="text-2xl font-bold text-blue-600"><?php echo displayPrice($package['flight_price']); ?> / pers</p>
                         </div>
                     </div>
@@ -152,7 +123,7 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                 </div>
                 <?php endif; ?>
                 
-                <!-- Hôtel -->
+                <!-- Hôtel complet -->
                 <?php if(!empty($package['hotel_name'])): ?>
                 <div class="bg-white rounded-2xl shadow-lg p-6">
                     <h2 class="text-2xl font-bold mb-4">Votre hôtel</h2>
@@ -166,7 +137,7 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                             <h3 class="text-xl font-bold"><?php echo htmlspecialchars($package['hotel_name']); ?></h3>
                             <div class="flex items-center gap-1 mt-1">
                                 <?php for($i=1; $i<=5; $i++): ?>
-                                    <?php if($i <= ($package['hotel_stars'] ?? 0)): ?>
+                                    <?php if($i <= ($package['hotel_stars'] ?? 3)): ?>
                                         <svg class="w-5 h-5 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                                     <?php else: ?>
                                         <svg class="w-5 h-5 text-gray-300 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
@@ -174,14 +145,12 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                                 <?php endfor; ?>
                             </div>
                             <p class="text-gray-600 text-sm mt-2"><?php echo htmlspecialchars($package['hotel_address'] ?? ''); ?></p>
-                            <?php if(!empty($package['hotel_view'])): ?>
-                            <p class="text-gray-600 text-sm mt-1"><?php echo htmlspecialchars($package['hotel_view']); ?></p>
-                            <?php endif; ?>
+                            <p class="text-gray-600 text-sm mt-1"><?php echo htmlspecialchars($package['hotel_view'] ?? ''); ?></p>
                             <p class="text-gray-600 text-sm"><?php echo htmlspecialchars($package['room_type'] ?? 'Chambre standard'); ?></p>
                             
                             <div class="flex items-center gap-2 mt-2 text-sm text-gray-600">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                                <span>Capacité : <?php echo $package['chambre_capacite']; ?> personnes</span>
+                                <span>Capacité : <?php echo $package['chambre_capacite'] ?? 2; ?> personnes</span>
                             </div>
                             
                             <div class="flex items-center gap-2 mt-1 text-sm text-gray-600">
@@ -192,7 +161,7 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                             <div class="mt-3">
                                 <p class="text-2xl font-bold text-blue-600"><?php echo displayPrice($package['hotel_price']); ?></p>
                                 <p class="text-gray-500 text-sm">pour le séjour complet</p>
-                                <?php if($package['hotel_price'] > 0 && $package['duration_nights'] > 0): ?>
+                                <?php if(!empty($package['hotel_price']) && !empty($package['duration_nights'])): ?>
                                     <p class="text-gray-500 text-xs mt-1">Soit <?php echo displayPrice($package['hotel_price'] / $package['duration_nights']); ?> par nuit</p>
                                 <?php endif; ?>
                             </div>
@@ -200,28 +169,24 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                     </div>
                     
                     <!-- Galerie chambre -->
-                    <?php if(!empty($package['hotel_room_images']) && count($package['hotel_room_images']) > 0): ?>
+                    <?php if(!empty($package['hotel_room_images']) && is_array($package['hotel_room_images'])): ?>
                     <div class="mt-4">
                         <h4 class="font-semibold mb-2">Photos de la chambre</h4>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                             <?php foreach($package['hotel_room_images'] as $img): ?>
-                                <?php if(!empty($img)): ?>
                                 <img src="<?php echo $img; ?>" class="rounded-lg h-24 w-full object-cover cursor-pointer hover:opacity-80 transition" onclick="openImageModal(this.src)">
-                                <?php endif; ?>
                             <?php endforeach; ?>
                         </div>
                     </div>
                     <?php endif; ?>
                     
                     <!-- Galerie terrasse -->
-                    <?php if(!empty($package['hotel_terrace_images']) && count($package['hotel_terrace_images']) > 0): ?>
+                    <?php if(!empty($package['hotel_terrace_images']) && is_array($package['hotel_terrace_images'])): ?>
                     <div class="mt-4">
                         <h4 class="font-semibold mb-2">Vue depuis la terrasse</h4>
                         <div class="grid grid-cols-2 gap-2">
                             <?php foreach($package['hotel_terrace_images'] as $img): ?>
-                                <?php if(!empty($img)): ?>
                                 <img src="<?php echo $img; ?>" class="rounded-lg h-32 w-full object-cover cursor-pointer hover:opacity-80 transition" onclick="openImageModal(this.src)">
-                                <?php endif; ?>
                             <?php endforeach; ?>
                         </div>
                     </div>
@@ -230,7 +195,6 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                 <?php endif; ?>
                 
                 <!-- Activités détaillées -->
-                <?php if(!empty($package['activity1_name']) || !empty($package['activity2_name']) || !empty($package['activity3_name'])): ?>
                 <div class="bg-white rounded-2xl shadow-lg p-6">
                     <h2 class="text-2xl font-bold mb-4">Activités incluses</h2>
                     <div class="space-y-4">
@@ -268,7 +232,6 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                         <?php endif; ?>
                     </div>
                 </div>
-                <?php endif; ?>
             </div>
             
             <!-- Colonne droite - Prix et réservation -->
@@ -276,10 +239,11 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                 <div class="bg-white rounded-2xl shadow-xl p-6 sticky top-32">
                     <h3 class="text-xl font-bold mb-4">Votre voyage</h3>
                     
+                    <!-- Breakdown des prix -->
                     <div class="border-b pb-3 mb-3">
                         <div class="flex justify-between text-sm mb-1">
                             <span class="text-gray-600">Vol</span>
-                            <span class="font-semibold"><?php echo displayPrice($package['flight_price']); ?></span>
+                            <span class="font-semibold"><?php echo displayPrice($package['flight_price'] ?? 0); ?></span>
                         </div>
                         <?php if(!empty($package['visa_price']) && $package['visa_price'] > 0): ?>
                         <div class="flex justify-between text-sm mb-1">
@@ -289,7 +253,7 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
                         <?php endif; ?>
                         <div class="flex justify-between text-sm mb-1">
                             <span class="text-gray-600">Hôtel (<?php echo $package['duration_nights']; ?> nuits)</span>
-                            <span class="font-semibold"><?php echo displayPrice($package['hotel_price']); ?></span>
+                            <span class="font-semibold"><?php echo displayPrice($package['hotel_price'] ?? 0); ?></span>
                         </div>
                         <?php if(!empty($package['transfer_price']) && $package['transfer_price'] > 0): ?>
                         <div class="flex justify-between text-sm mb-1">
@@ -372,6 +336,7 @@ $package['activity3_description'] = $package['activite3_description'] ?? '';
 </div>
 
 <script>
+// Fonction pour ouvrir le modal
 function openImageModal(src) {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImage');
@@ -383,6 +348,7 @@ function openImageModal(src) {
     }
 }
 
+// Fonction pour fermer le modal
 function closeImageModal() {
     const modal = document.getElementById('imageModal');
     if(modal) {
@@ -392,10 +358,17 @@ function closeImageModal() {
     }
 }
 
+// Fermer avec la touche Echap
 document.addEventListener('keydown', function(e) {
     if(e.key === 'Escape') {
         closeImageModal();
     }
+});
+
+// Initialisation du formulaire
+document.getElementById('packageBookingForm')?.addEventListener('submit', function(e) {
+    // Le formulaire est prêt à être soumis
+    console.log('Soumission du formulaire package');
 });
 </script>
 
