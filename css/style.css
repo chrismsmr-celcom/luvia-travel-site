@@ -483,3 +483,141 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 body.menu-open {
     overflow: hidden;
 }
+/* Autocomplétion */
+.autocomplete-results {
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 9999;
+}
+
+.autocomplete-item {
+    transition: background-color 0.2s ease;
+}
+
+.autocomplete-item:hover {
+    background-color: #f3f4f6;
+}
+
+.autocomplete-item.bg-blue-50 {
+    background-color: #eff6ff;
+}
+/* Correction pour l'autocomplétion - doit sortir du conteneur */
+.autocomplete-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.autocomplete-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    min-width: 250px;
+    margin-top: 4px;
+}
+
+.autocomplete-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+}
+
+.autocomplete-item:hover {
+    background-color: #f3f4f6;
+}
+
+.autocomplete-item.selected {
+    background-color: #eff6ff;
+}
+
+/* Forcer les conteneurs parents à ne pas cacher l'autocomplétion */
+.relative {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+.flex-1.relative {
+    overflow: visible !important;
+}
+
+div[class*="p-3"] {
+    overflow: visible !important;
+}
+
+/* S'assurer que le conteneur de l'input permet le débordement */
+form > div, .tab-content-desktop > div, .p-5 > div {
+    overflow: visible !important;
+}
+
+.bg-white.rounded-2xl {
+    overflow: visible !important;
+}
+/* FORCER tous les conteneurs à ne pas cacher l'autocomplétion */
+* {
+    overflow-anchor: none;
+}
+
+.relative, 
+div.relative,
+.flex-1.relative,
+[class*="relative"] {
+    overflow: visible !important;
+}
+
+form div[class*="border-r"],
+form div[class*="flex-1"] {
+    overflow: visible !important;
+}
+
+.bg-white.rounded-2xl,
+.bg-white.rounded-2xl.shadow-2xl,
+.bg-white.rounded-2xl.shadow-2xl.overflow-hidden {
+    overflow: visible !important;
+}
+
+.tab-content-desktop {
+    overflow: visible !important;
+}
+
+.p-5 {
+    overflow: visible !important;
+}
+/* Colorer data-city en bleu dans les résultats d'autocomplétion */
+.autocomplete-item [data-city] {
+    color: #2563eb !important;
+}
+
+/* Ou si tu veux colorer le texte de la ville spécifiquement */
+.autocomplete-item .city-name {
+    color: #2563eb;
+    font-weight: 500;
+}
+
+/* Version plus simple - colorer tout l'élément qui a data-city */
+[data-city] {
+    color: #2563eb;
+}
+
+/* Pour n'affecter que les résultats d'autocomplétion */
+.autocomplete-results [data-city] {
+    color: #2563eb;
+    font-weight: 500;
+}
+
+/* Styliser la partie ville en bleu (si tu modifies le display) */
+.autocomplete-item .city-part {
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.autocomplete-item .location-part {
+    color: #374151;
+}
