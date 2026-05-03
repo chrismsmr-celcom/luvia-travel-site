@@ -93,6 +93,7 @@ $today = date('Y-m-d');
     transition: background-color 0.2s;
     border-bottom: 1px solid #f0f0f0;
     font-size: 14px;
+    color: #374151;
 }
 
 .autocomplete-item:hover {
@@ -103,7 +104,39 @@ $today = date('Y-m-d');
     background-color: #eff6ff;
 }
 
-/* Forcer les conteneurs parents à ne pas cacher l'autocomplétion */
+/* ==================== COULEUR BLEUE POUR LA VILLE ==================== */
+/* Version 1 : Colorer tout élément avec data-city */
+[data-city] {
+    color: #2563eb !important;
+    font-weight: 500;
+}
+
+/* Version 2 : Colorer spécifiquement dans les résultats d'autocomplétion */
+.autocomplete-results [data-city] {
+    color: #2563eb !important;
+    font-weight: 600;
+}
+
+/* Version 3 : Colorer la classe city-name */
+.autocomplete-item .city-name {
+    color: #2563eb;
+    font-weight: 500;
+}
+
+/* Version 4 : Colorer la partie ville spécifique */
+.autocomplete-item .city-part {
+    color: #2563eb;
+    font-weight: 600;
+}
+
+/* Le nom principal/lieu reste gris */
+.autocomplete-item .location-part,
+.autocomplete-item .main-name {
+    color: #374151;
+    font-weight: normal;
+}
+
+/* ==================== FORCER LES CONTENEURS ==================== */
 .relative, 
 div.relative,
 .flex-1.relative,
@@ -120,7 +153,6 @@ div[class*="p-3"],
 .bg-white.rounded-2xl {
     overflow: visible !important;
 }
-
 /* ==================== VERSION DESKTOP ==================== */
 @media (min-width: 769px) {
     .mobile-search-container { display: none; }
