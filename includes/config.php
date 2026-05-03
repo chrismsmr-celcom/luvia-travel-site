@@ -800,6 +800,100 @@ function bookRate($prebookId, array $holder, array $guests, $paymentMethod = 'AC
 
     return liteAPIRequest($url, 'POST', $payload);
 }
+// ==================== SERVICE TRANSFERTS AEROPORT ====================
+
+function getTransfers($departureCity = null, $arrivalCity = null, $vehicleType = null) {
+    $filters = [];
+    
+    if ($departureCity) {
+        $filters[] = "departure_city=ilike.*" . urlencode($departureCity) . "*";
+    }
+    
+    if ($arrivalCity) {
+        $filters[] = "arrival_city=ilike.*" . urlencode($arrivalCity) . "*";
+    }
+    
+    if ($vehicleType) {
+        $filters[] = "vehicle_type=eq." . $vehicleType;
+    }
+    
+    $filters[] = "is_active=eq.true";
+    
+    $filterStr = implode("&", $filters);
+    $endpoint = "transfers?select=*&" . $filterStr . "&order=price_usd.asc";
+    
+    return supabaseRequest($endpoint);
+}
+
+function getTransferById($id) {
+    $endpoint = "transfers?select=*&id=eq." . intval($id);
+    $data = supabaseRequest($endpoint);
+    return !empty($data) ? $data[0] : null;
+}
+
+function getTransfersFromAirport($airportCode) {
+    $endpoint = "transfers?select=*&departure_airport_code=eq." . strtoupper($airportCode) . "&is_active=eq.true&order=price_usd.asc";
+    return supabaseRequest($endpoint);
+}
+
+function getTransfersToAirport($airportCode) {
+    $endpoint = "transfers?select=*&arrival_airport_code=eq." . strtoupper($airportCode) . "&is_active=eq.true&order=price_usd.asc";
+    return supabaseRequest($endpoint);
+}
+
+function getVehicleTypes() {
+    $endpoint = "vehicle_types?select=*";
+    return supabaseRequest($endpoint);
+}
+
+function calculateTransferPrice($transferId, $passengers = 1, $extraLuggage = 0) {
+    $transfer = getTransferById($transferId);
+    if (!$transfer) return 0;
+    
+    $basePrice = $transfer['price_usd'];
+    $extraPassengerFee = 0;
+    
+    // Supplément pour passagers supplémentaires au-delà de la capacité standard
+    if ($passengers > $transfer['max_passengers']) {
+        $extraPassengers = $passengers - $transfer['max_passengers'];
+        $extraPassengerFee = $extraPassengers * 5; // $5 par passager supplémentaire
+    }
+    
+    // Supplément pour bagages supplémentaires
+    $extraLuggageFee = $extraLuggage * 3; // $3 par bagage supplémentaire
+    
+    return $basePrice + $extraPassengerFee + $extraLuggageFee;
+}
+
+// Fonction pour rechercher les transferts disponibles
+function searchAvailableTransfers($departure, $arrival, $date = null, $passengers = 1) {
+    $endpoint = "transfers?select=*&departure_city=ilike.*" . urlencode($departure) . "*&arrival_city=ilike.*" . urlencode($arrival) . "*&max_passengers=gte." . intval($passengers) . "&is_active=eq.true&order=price_usd.asc";
+    return supabaseRequest($endpoint);
+}
+
+// Récupérer les aéroports disponibles pour les transferts
+function getTransferAirports() {
+    // Récupérer tous les aéroports distincts qui ont des transferts
+    $endpoint = "transfers?select=departure_airport_code,departure_airport_name,departure_city&order=departure_city.asc";
+    $data = supabaseRequest($endpoint);
+    
+    $airports = [];
+    $seen = [];
+    
+    foreach ($data as $item) {
+        $code = $item['departure_airport_code'];
+        if (!isset($seen[$code]) && !empty($code)) {
+            $seen[$code] = true;
+            $airports[] = [
+                'code' => $code,
+                'name' => $item['departure_airport_name'],
+                'city' => $item['departure_city']
+            ];
+        }
+    }
+    
+    return $airports;
+}
 
 // ==================== SERVICE VOITURES ====================
 function searchCars($city, $rental_type, $car_type, $transmission) {
