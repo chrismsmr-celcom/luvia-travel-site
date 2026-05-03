@@ -11,7 +11,6 @@
             font-family: 'Inter', sans-serif;
         }
         
-        /* Style personnalisé pour les inputs sans bordure */
         .search-container {
             background: white;
             border-radius: 20px;
@@ -35,20 +34,17 @@
             border-right: 1px solid #e5e7eb;
         }
         
-        /* Masquer les flèches des inputs number */
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
         
-        /* Focus sans bordure */
         input:focus, select:focus {
             outline: none;
             ring: none;
         }
         
-        /* Badge NEW */
         .badge-new {
             position: absolute;
             top: -8px;
@@ -62,6 +58,33 @@
             letter-spacing: 0.5px;
         }
         
+        /* Styles pour l'autocomplétion */
+        .autocomplete-results {
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 9999;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+        }
+        
+        .autocomplete-item {
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .autocomplete-item:hover {
+            background-color: #f3f4f6;
+        }
+        
+        .autocomplete-item.selected {
+            background-color: #eff6ff;
+        }
+        
+        .relative {
+            position: relative;
+        }
+        
         @media (max-width: 768px) {
             .divider-vertical {
                 border-right: none;
@@ -72,102 +95,165 @@
 </head>
 <body class="bg-gradient-to-br from-blue-500 to-purple-600 min-h-screen flex items-center justify-center p-4">
     
-    <div class="w-full max-w-6xl mx-auto">
+    <div class="w-full max-w-6xl mx-auto space-y-6">
         
         <!-- Onglets (Tabs) -->
         <div class="flex gap-1 ml-6">
-            <!-- Hotels -->
             <div class="tab-active px-8 py-3 rounded-t-xl font-semibold text-gray-800 cursor-pointer transition bg-white shadow-sm" data-tab="hotels">
                 Hotels
             </div>
-            
-            <!-- Flights -->
             <div class="tab-inactive px-8 py-3 rounded-t-xl font-semibold text-gray-500 cursor-pointer transition hover:bg-white/30" data-tab="flights">
                 Vols
             </div>
-            
-            <!-- Car Rental (avec badge NEW) -->
             <div class="tab-inactive px-8 py-3 rounded-t-xl font-semibold text-gray-500 cursor-pointer transition hover:bg-white/30 relative" data-tab="cars">
                 Car Rental
                 <span class="badge-new">NEW</span>
             </div>
         </div>
         
-        <!-- Barre de recherche principale -->
-        <div class="search-container bg-white rounded-2xl shadow-2xl overflow-hidden">
-            
-            <!-- Options de voyage (Round trip / One way / Multi-city) -->
-            <div class="px-6 pt-5 pb-2 border-b border-gray-100">
-                <div class="flex gap-6 text-sm">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="trip-type" value="roundtrip" checked class="w-4 h-4 text-blue-500">
-                        <span class="text-gray-700">Round trip</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="trip-type" value="oneway" class="w-4 h-4 text-blue-500">
-                        <span class="text-gray-700">One way</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="trip-type" value="multicity" class="w-4 h-4 text-blue-500">
-                        <span class="text-gray-700">Multi-city</span>
-                    </label>
+        <!-- ==================== SECTION VOLS ==================== -->
+        <div id="flights-section" class="tab-content">
+            <div class="search-container bg-white rounded-2xl shadow-2xl overflow-hidden">
+                
+                <div class="px-6 pt-5 pb-2 border-b border-gray-100">
+                    <div class="flex gap-6 text-sm">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="trip-type" value="roundtrip" checked class="w-4 h-4 text-blue-500">
+                            <span class="text-gray-700">Round trip</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="trip-type" value="oneway" class="w-4 h-4 text-blue-500">
+                            <span class="text-gray-700">One way</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="trip-type" value="multicity" class="w-4 h-4 text-blue-500">
+                            <span class="text-gray-700">Multi-city</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col md:flex-row">
+                    <div class="flex-1 flex flex-col md:flex-row">
+                        <div class="flex-1 relative p-4 md:pl-6 md:pr-4 divider-vertical">
+                            <div class="flex items-center gap-3">
+                                <div class="text-gray-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Flying from</label>
+                                    <input type="text" id="flight-origin" placeholder="Ville ou aéroport" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0" value="Kinshasa">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-1 relative p-4 md:pr-6 divider-vertical">
+                            <div class="flex items-center gap-3">
+                                <div class="text-gray-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Flying to</label>
+                                    <input type="text" id="flight-destination" placeholder="Ville ou aéroport" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0" value="Lubumbashi">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 flex flex-col md:flex-row">
+                        <div class="flex-1 p-4 md:pr-4 divider-vertical">
+                            <div class="flex items-center gap-3">
+                                <div class="text-gray-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Departure</label>
+                                    <input type="date" id="flight-departure" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0" value="2026-05-15">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-1 p-4 divider-vertical">
+                            <div class="flex items-center gap-3">
+                                <div class="text-gray-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Return</label>
+                                    <input type="date" id="flight-return" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0" value="2026-05-20">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full md:w-72 p-4">
+                        <div class="flex items-center gap-3 h-full">
+                            <div class="text-gray-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Passengers</label>
+                                <div class="flex items-center justify-between">
+                                    <span id="passenger-count" class="text-lg font-medium text-gray-800">1</span>
+                                    <span class="text-gray-400 mx-2">•</span>
+                                    <select id="flight-class" class="text-sm text-gray-700 border-none bg-transparent focus:ring-0">
+                                        <option>Economy</option>
+                                        <option>Premium Economy</option>
+                                        <option>Business</option>
+                                        <option>First Class</option>
+                                    </select>
+                                    <button id="passenger-selector" class="ml-2 text-gray-400 hover:text-gray-600">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="md:w-auto p-3 bg-blue-600 flex items-center justify-center md:rounded-r-2xl">
+                        <button id="flight-search-btn" class="text-white font-bold text-lg uppercase tracking-wide px-8 py-3 w-full md:w-auto whitespace-nowrap">
+                            RECHERCHER
+                        </button>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Champs de recherche horizontaux -->
-            <div class="flex flex-col md:flex-row">
+        </div>
+        
+        <!-- ==================== SECTION HOTELS ==================== -->
+        <div id="hotels-section" class="tab-content hidden">
+            <div class="search-container bg-white rounded-2xl shadow-2xl overflow-hidden">
                 
-                <!-- 1. Départ / Arrivée -->
-                <div class="flex-1 flex flex-col md:flex-row">
-                    <!-- Départ -->
-                    <div class="flex-1 relative p-4 md:pl-6 md:pr-4 divider-vertical">
-                        <div class="flex items-center gap-3">
-                            <div class="text-gray-400">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Flying from</label>
-                                <input type="text" placeholder="Paris (CDG)" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0" value="Kinshasa (FIH)">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Arrivée -->
-                    <div class="flex-1 relative p-4 md:pr-6 divider-vertical">
-                        <div class="flex items-center gap-3">
-                            <div class="text-gray-400">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Flying to</label>
-                                <input type="text" placeholder="New York (JFK)" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0" value="Lubumbashi (FBM)">
-                            </div>
-                        </div>
-                    </div>
+                <div class="px-6 pt-5 pb-2 border-b border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800">Rechercher un hôtel</h2>
                 </div>
                 
-                <!-- 2. Dates -->
-                <div class="flex-1 flex flex-col md:flex-row">
-                    <!-- Départ -->
-                    <div class="flex-1 p-4 md:pr-4 divider-vertical">
+                <div class="flex flex-col md:flex-row">
+                    
+                    <div class="flex-1 p-4 md:pl-6 divider-vertical relative">
                         <div class="flex items-center gap-3">
                             <div class="text-gray-400">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Departure</label>
-                                <input type="date" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0" value="2026-05-15">
+                                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Destination</label>
+                                <input type="text" id="hotel-destination" placeholder="Ville, hôtel ou lieu" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0">
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Retour -->
                     <div class="flex-1 p-4 divider-vertical">
                         <div class="flex items-center gap-3">
                             <div class="text-gray-400">
@@ -176,160 +262,302 @@
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Return</label>
-                                <input type="date" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0" value="2026-05-20">
+                                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Check-in</label>
+                                <input type="date" id="hotel-checkin" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0">
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- 3. Passagers / Classe -->
-                <div class="w-full md:w-72 p-4">
-                    <div class="flex items-center gap-3 h-full">
-                        <div class="text-gray-400">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Passengers</label>
-                            <div class="flex items-center justify-between">
-                                <span id="passenger-count" class="text-lg font-medium text-gray-800">1</span>
-                                <span class="text-gray-400 mx-2">•</span>
-                                <select class="text-sm text-gray-700 border-none bg-transparent focus:ring-0">
-                                    <option>Economy</option>
-                                    <option>Premium Economy</option>
-                                    <option>Business</option>
-                                    <option>First Class</option>
-                                </select>
-                                <button id="passenger-selector" class="ml-2 text-gray-400 hover:text-gray-600">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </button>
+                    
+                    <div class="flex-1 p-4 divider-vertical">
+                        <div class="flex items-center gap-3">
+                            <div class="text-gray-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Check-out</label>
+                                <input type="date" id="hotel-checkout" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0">
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Bouton SEARCH -->
-                <div class="md:w-auto p-3 bg-[#7c9aff] flex items-center justify-center md:rounded-r-2xl">
-                    <button class="text-white font-bold text-lg uppercase tracking-wide px-8 py-3 w-full md:w-auto whitespace-nowrap">
-                        SEARCH
-                    </button>
+                    
+                    <div class="w-full md:w-64 p-4">
+                        <div class="flex items-center gap-3 h-full">
+                            <div class="text-gray-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Voyageurs</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="hotel-adults" value="2" min="1" class="w-16 text-lg font-medium text-gray-800 border border-gray-200 rounded-lg p-1 text-center">
+                                    <span class="text-gray-400 text-sm">adultes</span>
+                                    <input type="text" id="hotel-children-ages" placeholder="Âges" class="w-20 text-sm text-gray-800 border border-gray-200 rounded-lg p-1 text-center">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="md:w-auto p-3 bg-blue-600 flex items-center justify-center md:rounded-r-2xl">
+                        <button id="hotel-search-btn" class="text-white font-bold text-lg uppercase tracking-wide px-8 py-3 w-full md:w-auto whitespace-nowrap">
+                            RECHERCHER
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <!-- Message d'exemple -->
         <div class="text-center mt-8 text-white/80 text-sm">
-            ✈️ 126 vols disponibles • Meilleurs prix garantis
+            ✈️ Vols disponibles • Meilleurs prix garantis
         </div>
-    </div>
-    <!-- Barre de recherche HÔTELS (inspirée du style) -->
-<div class="search-container bg-white rounded-2xl shadow-2xl overflow-hidden">
-    
-    <!-- Titre -->
-    <div class="px-6 pt-5 pb-2 border-b border-gray-100">
-        <h2 class="text-lg font-semibold text-gray-800">Rechercher un hôtel</h2>
     </div>
     
-    <!-- Champs de recherche hôtels -->
-    <div class="flex flex-col md:flex-row">
-        
-        <!-- Destination -->
-        <div class="flex-1 p-4 md:pl-6 divider-vertical">
-            <div class="flex items-center gap-3">
-                <div class="text-gray-400">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
-                </div>
-                <div class="flex-1">
-                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Destination</label>
-                    <input type="text" id="hotel-destination" placeholder="Ville, hôtel ou lieu" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0">
-                </div>
-            </div>
-        </div>
-        
-        <!-- Check-in -->
-        <div class="flex-1 p-4 divider-vertical">
-            <div class="flex items-center gap-3">
-                <div class="text-gray-400">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                </div>
-                <div class="flex-1">
-                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Check-in</label>
-                    <input type="date" id="hotel-checkin" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0">
-                </div>
-            </div>
-        </div>
-        
-        <!-- Check-out -->
-        <div class="flex-1 p-4 divider-vertical">
-            <div class="flex items-center gap-3">
-                <div class="text-gray-400">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                </div>
-                <div class="flex-1">
-                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Check-out</label>
-                    <input type="date" id="hotel-checkout" class="w-full text-lg font-medium text-gray-800 border-none p-0 focus:ring-0">
-                </div>
-            </div>
-        </div>
-        
-        <!-- Adultes et enfants -->
-        <div class="w-full md:w-64 p-4">
-            <div class="flex items-center gap-3 h-full">
-                <div class="text-gray-400">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                    </svg>
-                </div>
-                <div class="flex-1">
-                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Voyageurs</label>
-                    <div class="flex items-center gap-2">
-                        <input type="number" id="hotel-adults" value="2" min="1" class="w-16 text-lg font-medium text-gray-800 border border-gray-200 rounded-lg p-1 text-center">
-                        <span class="text-gray-400 text-sm">adultes</span>
-                        <input type="text" id="hotel-children-ages" placeholder="Âges" class="w-20 text-sm text-gray-800 border border-gray-200 rounded-lg p-1 text-center">
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Bouton SEARCH -->
-        <div class="md:w-auto p-3 bg-blue-600 flex items-center justify-center md:rounded-r-2xl">
-            <button id="hotel-search-btn" class="text-white font-bold text-lg uppercase tracking-wide px-8 py-3 w-full md:w-auto whitespace-nowrap">
-                RECHERCHER
-            </button>
-        </div>
-    </div>
-</div>
     <script>
-        // Changement d'onglet
+        // ==================== AUTOCOMPLETION ====================
+        class CityAutocomplete {
+            constructor(inputElement, options = {}) {
+                this.input = inputElement;
+                this.options = {
+                    minChars: 2,
+                    delay: 300,
+                    maxResults: 10,
+                    ...options
+                };
+                
+                this.currentRequest = null;
+                this.resultsContainer = null;
+                this.selectedIndex = -1;
+                
+                this.init();
+            }
+            
+            init() {
+                // Créer le conteneur des résultats
+                this.resultsContainer = document.createElement('div');
+                this.resultsContainer.className = 'autocomplete-results absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden';
+                
+                // S'assurer que le parent a position relative
+                if (getComputedStyle(this.input.parentElement).position !== 'relative') {
+                    this.input.parentElement.style.position = 'relative';
+                }
+                this.input.parentElement.appendChild(this.resultsContainer);
+                
+                // Événements
+                this.input.addEventListener('input', (e) => this.onInput(e));
+                this.input.addEventListener('keydown', (e) => this.onKeyDown(e));
+                this.input.addEventListener('blur', (e) => this.onBlur(e));
+            }
+            
+            onInput(event) {
+                const query = event.target.value.trim();
+                
+                if (query.length < this.options.minChars) {
+                    this.hideResults();
+                    return;
+                }
+                
+                clearTimeout(this.debounceTimeout);
+                this.debounceTimeout = setTimeout(() => this.search(query), this.options.delay);
+            }
+            
+            async search(query) {
+                if (this.currentRequest) {
+                    this.currentRequest.abort();
+                }
+                
+                this.currentRequest = new AbortController();
+                
+                try {
+                    const response = await fetch(`includes/config.php?action=autocomplete&query=${encodeURIComponent(query)}`, {
+                        signal: this.currentRequest.signal
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.displayResults(data.results);
+                    }
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        console.error('Autocomplete error:', error);
+                    }
+                } finally {
+                    this.currentRequest = null;
+                }
+            }
+            
+            displayResults(results) {
+                if (results.length === 0) {
+                    this.hideResults();
+                    return;
+                }
+                
+                this.resultsContainer.innerHTML = '';
+                this.selectedIndex = -1;
+                
+                results.forEach((result, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item p-3 hover:bg-gray-100 border-b border-gray-100 last:border-0';
+                    item.innerHTML = result.display;
+                    item.setAttribute('data-value', result.value);
+                    item.setAttribute('data-city', result.city);
+                    item.setAttribute('data-country', result.country || '');
+                    item.setAttribute('data-type', result.type);
+                    
+                    item.addEventListener('click', () => {
+                        this.selectResult(result);
+                    });
+                    
+                    item.addEventListener('mouseenter', () => {
+                        this.selectedIndex = index;
+                        this.highlightSelected();
+                    });
+                    
+                    this.resultsContainer.appendChild(item);
+                });
+                
+                this.resultsContainer.classList.remove('hidden');
+                this.resultsContainer.style.display = 'block';
+            }
+            
+            highlightSelected() {
+                const items = this.resultsContainer.querySelectorAll('.autocomplete-item');
+                items.forEach((item, index) => {
+                    if (index === this.selectedIndex) {
+                        item.classList.add('bg-blue-50');
+                    } else {
+                        item.classList.remove('bg-blue-50');
+                    }
+                });
+            }
+            
+            selectResult(result) {
+                this.input.value = result.value;
+                this.hideResults();
+                
+                // Stocker les données supplémentaires
+                this.input.dataset.city = result.city;
+                this.input.dataset.country = result.country || '';
+                this.input.dataset.type = result.type;
+                
+                const event = new Event('change', { bubbles: true });
+                this.input.dispatchEvent(event);
+            }
+            
+            onKeyDown(event) {
+                const items = this.resultsContainer.querySelectorAll('.autocomplete-item');
+                
+                if (items.length === 0) return;
+                
+                switch (event.key) {
+                    case 'ArrowDown':
+                        event.preventDefault();
+                        this.selectedIndex = Math.min(this.selectedIndex + 1, items.length - 1);
+                        this.highlightSelected();
+                        break;
+                        
+                    case 'ArrowUp':
+                        event.preventDefault();
+                        this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
+                        this.highlightSelected();
+                        break;
+                        
+                    case 'Enter':
+                        event.preventDefault();
+                        if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
+                            const value = items[this.selectedIndex].getAttribute('data-value');
+                            const result = {
+                                value: value,
+                                city: items[this.selectedIndex].getAttribute('data-city'),
+                                country: items[this.selectedIndex].getAttribute('data-country'),
+                                type: items[this.selectedIndex].getAttribute('data-type')
+                            };
+                            this.selectResult(result);
+                        }
+                        break;
+                        
+                    case 'Escape':
+                        this.hideResults();
+                        break;
+                }
+            }
+            
+            onBlur(event) {
+                setTimeout(() => {
+                    if (!this.resultsContainer.contains(document.activeElement)) {
+                        this.hideResults();
+                    }
+                }, 200);
+            }
+            
+            hideResults() {
+                this.resultsContainer.classList.add('hidden');
+                this.resultsContainer.style.display = 'none';
+                this.resultsContainer.innerHTML = '';
+                this.selectedIndex = -1;
+            }
+        }
+        
+        // ==================== CHANGEMENT D'ONGLET ====================
         document.querySelectorAll('[data-tab]').forEach(tab => {
             tab.addEventListener('click', function() {
-                // Reset tous les onglets
+                const tabType = this.dataset.tab;
+                
                 document.querySelectorAll('[data-tab]').forEach(t => {
                     t.classList.remove('tab-active', 'bg-white', 'text-gray-800');
                     t.classList.add('tab-inactive', 'text-gray-500');
                 });
                 
-                // Activer l'onglet cliqué
                 this.classList.remove('tab-inactive', 'text-gray-500');
                 this.classList.add('tab-active', 'bg-white', 'text-gray-800');
                 
-                // Simulation de changement de contenu
-                const tabType = this.dataset.tab;
-                console.log(`Changement d'onglet vers: ${tabType}`);
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                document.getElementById(`${tabType}-section`).classList.remove('hidden');
             });
         });
         
-        // Sélecteur de passagers simple
+        // ==================== INITIALISATION DE L'AUTOCOMPLETION ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialiser sur tous les champs de ville
+            const cityInputs = [
+                'hotel-destination',
+                'flight-origin', 
+                'flight-destination'
+            ];
+            
+            cityInputs.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    new CityAutocomplete(input, {
+                        minChars: 2,
+                        delay: 300
+                    });
+                }
+            });
+            
+            // Initialiser les dates par défaut
+            const today = new Date();
+            const defaultCheckin = new Date();
+            defaultCheckin.setDate(today.getDate() + 60);
+            const defaultCheckout = new Date();
+            defaultCheckout.setDate(today.getDate() + 63);
+            
+            const hotelCheckin = document.getElementById('hotel-checkin');
+            const hotelCheckout = document.getElementById('hotel-checkout');
+            if (hotelCheckin) hotelCheckin.value = defaultCheckin.toISOString().split('T')[0];
+            if (hotelCheckout) hotelCheckout.value = defaultCheckout.toISOString().split('T')[0];
+            
+            const flightDeparture = document.getElementById('flight-departure');
+            const flightReturn = document.getElementById('flight-return');
+            if (flightDeparture) flightDeparture.value = defaultCheckin.toISOString().split('T')[0];
+            if (flightReturn) flightReturn.value = defaultCheckout.toISOString().split('T')[0];
+        });
+        
+        // ==================== SÉLECTEUR DE PASSAGERS ====================
         let passengerCount = 1;
         const passengerCountSpan = document.getElementById('passenger-count');
         const passengerSelector = document.getElementById('passenger-selector');
@@ -337,44 +565,54 @@
         if(passengerSelector) {
             passengerSelector.addEventListener('click', () => {
                 passengerCount = passengerCount === 5 ? 1 : passengerCount + 1;
-                passengerCountSpan.textContent = passengerCount;
+                if(passengerCountSpan) passengerCountSpan.textContent = passengerCount;
             });
         }
         
-        // Format des dates pour l'affichage
-        const dateInputs = document.querySelectorAll('input[type="date"]');
-        dateInputs.forEach(input => {
-            input.addEventListener('change', function() {
-                const date = new Date(this.value);
-                const options = { day: 'numeric', month: 'short', year: 'numeric' };
-                console.log(`Date sélectionnée: ${date.toLocaleDateString('fr-FR', options)}`);
+        // ==================== RECHERCHE HÔTELS ====================
+        const hotelSearchBtn = document.getElementById('hotel-search-btn');
+        if(hotelSearchBtn) {
+            hotelSearchBtn.addEventListener('click', function() {
+                const destination = document.getElementById('hotel-destination')?.value;
+                const checkin = document.getElementById('hotel-checkin')?.value;
+                const checkout = document.getElementById('hotel-checkout')?.value;
+                const adults = document.getElementById('hotel-adults')?.value;
+                const childrenAges = document.getElementById('hotel-children-ages')?.value;
+                
+                if(!destination) {
+                    alert('Veuillez saisir une destination');
+                    return;
+                }
+                
+                let url = `search.php?type=hotel&city=${encodeURIComponent(destination)}&check_in=${checkin}&check_out=${checkout}&adults=${adults}`;
+                if (childrenAges) {
+                    url += `&children_ages=${encodeURIComponent(childrenAges)}`;
+                }
+                
+                window.location.href = url;
             });
-        });
-        // Initialiser les dates par défaut (60 jours dans le futur)
-const today = new Date();
-const defaultCheckin = new Date();
-defaultCheckin.setDate(today.getDate() + 60);
-const defaultCheckout = new Date();
-defaultCheckout.setDate(today.getDate() + 63);
-
-document.getElementById('hotel-checkin').value = defaultCheckin.toISOString().split('T')[0];
-document.getElementById('hotel-checkout').value = defaultCheckout.toISOString().split('T')[0];
-
-// Recherche d'hôtels
-document.getElementById('hotel-search-btn').addEventListener('click', function() {
-    const destination = document.getElementById('hotel-destination').value;
-    const checkin = document.getElementById('hotel-checkin').value;
-    const checkout = document.getElementById('hotel-checkout').value;
-    const adults = document.getElementById('hotel-adults').value;
-    const childrenAges = document.getElementById('hotel-children-ages').value;
-    
-    let url = `search.php?type=hotel&city=${encodeURIComponent(destination)}&check_in=${checkin}&check_out=${checkout}&adults=${adults}`;
-    if (childrenAges) {
-        url += `&children_ages=${encodeURIComponent(childrenAges)}`;
-    }
-    
-    window.location.href = url;
-});
+        }
+        
+        // ==================== RECHERCHE VOLS ====================
+        const flightSearchBtn = document.getElementById('flight-search-btn');
+        if(flightSearchBtn) {
+            flightSearchBtn.addEventListener('click', function() {
+                const origin = document.getElementById('flight-origin')?.value;
+                const destination = document.getElementById('flight-destination')?.value;
+                const departure = document.getElementById('flight-departure')?.value;
+                const returnDate = document.getElementById('flight-return')?.value;
+                const passengers = passengerCount;
+                
+                if(!origin || !destination) {
+                    alert('Veuillez saisir la ville de départ et d\'arrivée');
+                    return;
+                }
+                
+                let url = `search.php?type=flight&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&departure=${departure}&return=${returnDate}&adults=${passengers}`;
+                
+                window.location.href = url;
+            });
+        }
     </script>
     
 </body>
