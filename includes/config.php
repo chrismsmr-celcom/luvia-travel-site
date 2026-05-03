@@ -76,16 +76,45 @@ function duffelRequest($endpoint, $method = 'GET', $data = null) {
 
 // ==================== SERVICE VOLS ====================
 function getAirportCode($city) {
+    $city = trim(preg_replace('/[^a-zA-Z\s\-]/', '', $city));
+    if (empty($city)) return null;
+    
+    $cityLower = strtolower($city);
+    
+    // 1. Essayer via la table air_destinations
+    $endpoint = "air_destinations?select=iata_code&city=ilike.*" . urlencode($cityLower) . "*&limit=1";
+    $data = supabaseRequest($endpoint);
+    
+    if (!empty($data) && isset($data[0]['iata_code'])) {
+        error_log("getAirportCode: Trouvé via air_destinations - $city -> " . $data[0]['iata_code']);
+        return $data[0]['iata_code'];
+    }
+    
+    // 2. Mapping statique de fallback
     $codes = [
         'kinshasa' => 'FIH', 'lubumbashi' => 'FBM', 'goma' => 'GOM',
         'kisangani' => 'FKI', 'mbuji-mayi' => 'MJM', 'bukavu' => 'BKY',
         'matadi' => 'MAT', 'bandundu' => 'FDU', 'kananga' => 'KGA',
         'paris' => 'CDG', 'nairobi' => 'NBO', 'addis ababa' => 'ADD',
-        'johannesburg' => 'JNB', 'bruxelles' => 'BRU', 'dubai' => 'DXB'
+        'johannesburg' => 'JNB', 'bruxelles' => 'BRU', 'dubai' => 'DXB',
+        'zanzibar' => 'ZNZ', 'londres' => 'LHR', 'london' => 'LHR',
+        'new york' => 'JFK', 'los angeles' => 'LAX', 'chicago' => 'ORD',
+        'miami' => 'MIA', 'las vegas' => 'LAS', 'san francisco' => 'SFO',
+        'bangkok' => 'BKK', 'singapore' => 'SIN', 'hong kong' => 'HKG',
+        'tokyo' => 'NRT', 'seoul' => 'ICN', 'beijing' => 'PEK',
+        'shanghai' => 'PVG', 'mumbai' => 'BOM', 'delhi' => 'DEL',
+        'sydney' => 'SYD', 'melbourne' => 'MEL', 'auckland' => 'AKL'
     ];
     
-    $cityLower = strtolower(trim($city));
-    return $codes[$cityLower] ?? strtoupper(substr($cityLower, 0, 3));
+    if (isset($codes[$cityLower])) {
+        error_log("getAirportCode: Trouvé dans mapping - $city -> " . $codes[$cityLower]);
+        return $codes[$cityLower];
+    }
+    
+    // 3. Fallback générique
+    $fallback = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $cityLower), 0, 3));
+    error_log("getAirportCode: Non trouvé pour '$city', fallback: $fallback");
+    return $fallback;
 }
 
 function searchFlightsDuffel($origin, $destination, $departureDate, $returnDate = null, $adults = 1, $children = 0, $infants = 0) {
@@ -93,6 +122,7 @@ function searchFlightsDuffel($origin, $destination, $departureDate, $returnDate 
     $destinationCode = getAirportCode($destination);
     
     if(!$originCode || !$destinationCode) {
+        error_log("searchFlightsDuffel: Code IATA non trouvé - origin: $origin -> $originCode, destination: $destination -> $destinationCode");
         return [];
     }
     
@@ -126,6 +156,7 @@ function searchFlightsDuffel($origin, $destination, $departureDate, $returnDate 
     $response = duffelRequest('/air/offer_requests', 'POST', $requestData);
     
     if(isset($response['error']) || !isset($response['data']['offers'])) {
+        error_log("searchFlightsDuffel: Erreur API Duffel ou aucun vol trouvé");
         return [];
     }
     
@@ -251,25 +282,88 @@ function liteAPIRequest($url, $method = 'GET', $data = null) {
 // ==================== SERVICE HOTELS ====================
 
 function getCountryCodeFromCity($city) {
+    static $cache = [];
+    
+    $city = trim((string) $city);
+    if ($city === '') return 'FR';
+    
+    $cityLower = strtolower($city);
+    
+    if (isset($cache[$cityLower])) {
+        return $cache[$cityLower];
+    }
+    
+    // Mapping direct
+    $cityCountryMap = [
+        'kinshasa' => 'CD', 'lubumbashi' => 'CD', 'goma' => 'CD', 'bukavu' => 'CD',
+        'kisangani' => 'CD', 'mbuji mayi' => 'CD', 'kananga' => 'CD', 'likasi' => 'CD',
+        'kolwezi' => 'CD', 'mwene ditu' => 'CD', 'matadi' => 'CD', 'bandundu' => 'CD',
+        'le caire' => 'EG', 'cairo' => 'EG', 'alexandrie' => 'EG', 'alexandria' => 'EG',
+        'gizeh' => 'EG', 'giza' => 'EG', 'louxor' => 'EG', 'luxor' => 'EG',
+        'zanzibar' => 'TZ', 'dar es salaam' => 'TZ', 'arusha' => 'TZ', 'kilimandjaro' => 'TZ',
+        'dodoma' => 'TZ', 'marrakech' => 'MA', 'casablanca' => 'MA', 'rabat' => 'MA',
+        'fes' => 'MA', 'tanger' => 'MA', 'dakar' => 'SN', 'abidjan' => 'CI',
+        'accra' => 'GH', 'lagos' => 'NG', 'nairobi' => 'KE', 'mombasa' => 'KE',
+        'kampala' => 'UG', 'kigali' => 'RW', 'addis ababa' => 'ET', 'tunis' => 'TN',
+        'alger' => 'DZ', 'oran' => 'DZ', 'paris' => 'FR', 'marseille' => 'FR',
+        'lyon' => 'FR', 'toulouse' => 'FR', 'nice' => 'FR', 'bordeaux' => 'FR',
+        'londres' => 'GB', 'london' => 'GB', 'manchester' => 'GB', 'berlin' => 'DE',
+        'munich' => 'DE', 'hamburg' => 'DE', 'rome' => 'IT', 'milan' => 'IT',
+        'barcelone' => 'ES', 'madrid' => 'ES', 'amsterdam' => 'NL', 'brussels' => 'BE',
+        'bruxelles' => 'BE', 'vienna' => 'AT', 'vienne' => 'AT', 'prague' => 'CZ',
+        'budapest' => 'HU', 'warsaw' => 'PL', 'varsovie' => 'PL', 'athens' => 'GR',
+        'athènes' => 'GR', 'lisbon' => 'PT', 'lisbonne' => 'PT', 'dublin' => 'IE',
+        'copenhagen' => 'DK', 'copenhague' => 'DK', 'stockholm' => 'SE', 'oslo' => 'NO',
+        'helsinki' => 'FI', 'new york' => 'US', 'los angeles' => 'US', 'chicago' => 'US',
+        'miami' => 'US', 'las vegas' => 'US', 'san francisco' => 'US', 'boston' => 'US',
+        'toronto' => 'CA', 'montreal' => 'CA', 'vancouver' => 'CA', 'mexico' => 'MX',
+        'sao paulo' => 'BR', 'rio de janeiro' => 'BR', 'buenos aires' => 'AR',
+        'santiago' => 'CL', 'lima' => 'PE', 'bogota' => 'CO', 'tokyo' => 'JP',
+        'seoul' => 'KR', 'beijing' => 'CN', 'shanghai' => 'CN', 'hong kong' => 'HK',
+        'bangkok' => 'TH', 'singapore' => 'SG', 'kuala lumpur' => 'MY', 'jakarta' => 'ID',
+        'bali' => 'ID', 'mumbai' => 'IN', 'delhi' => 'IN', 'sydney' => 'AU',
+        'melbourne' => 'AU', 'auckland' => 'NZ', 'dubai' => 'AE', 'dubaï' => 'AE',
+        'doha' => 'QA', 'istanbul' => 'TR'
+    ];
+    
+    if (isset($cityCountryMap[$cityLower])) {
+        $cache[$cityLower] = $cityCountryMap[$cityLower];
+        return $cache[$cityLower];
+    }
+    
+    foreach ($cityCountryMap as $mappedCity => $code) {
+        if (strpos($cityLower, $mappedCity) !== false || strpos($mappedCity, $cityLower) !== false) {
+            $cache[$cityLower] = $code;
+            return $code;
+        }
+    }
+    
+    // Appel API OSM
     $url = "https://nominatim.openstreetmap.org/search?q=" . urlencode($city) . "&format=json&limit=1&addressdetails=1";
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'LuviaTravel/1.0');
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'LuviaTravel/1.0 (contact@luvia.travel)');
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
     
     if ($httpCode === 200 && $response) {
         $data = json_decode($response, true);
         if (isset($data[0]['address']['country_code'])) {
-            return strtoupper($data[0]['address']['country_code']);
+            $countryCode = strtoupper($data[0]['address']['country_code']);
+            $cache[$cityLower] = $countryCode;
+            return $countryCode;
         }
     }
+    
+    error_log("getCountryCodeFromCity: Ville non reconnue - '$city', fallback FR");
+    $cache[$cityLower] = 'FR';
     return 'FR';
 }
 
@@ -290,47 +384,32 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
 
     $occupancy = ['adults' => max(1, (int)$adults)];
     if (!empty($childrenAges) && is_array($childrenAges)) {
-        // Garder les âges y compris 0 (bébés)
         $filteredAges = [];
         foreach ($childrenAges as $age) {
             $ageInt = intval($age);
-            if ($ageInt >= 0 && $ageInt <= 17) {
-                $filteredAges[] = $ageInt;
-            }
+            if ($ageInt >= 0 && $ageInt <= 17) $filteredAges[] = $ageInt;
         }
-        if (!empty($filteredAges)) {
-            $occupancy['children'] = $filteredAges;
-        }
+        if (!empty($filteredAges)) $occupancy['children'] = $filteredAges;
     }
 
-    // ÉTAPE 1: Récupérer les hôtels depuis Data API - LIMITE 500 (performance)
-    $hotelsData = getHotelsFromDataAPI($countryCode, $city, 500);
+    // Récupérer les hôtels
+    $hotelsData = getHotelsFromDataAPI($countryCode, $city, 100);
     if (empty($hotelsData)) return [];
     
-    // ÉTAPE 2: Récupérer les prix et disponibilités (par lots pour éviter timeout)
+    // Limiter à 50 hôtels pour les prix
     $hotelIds = array_column($hotelsData, 'id');
-    $allRatesData = [];
+    $hotelIds = array_slice($hotelIds, 0, 50);
     
-    // Traiter par lots de 100 pour éviter les timeouts
-    $chunks = array_chunk($hotelIds, 100);
-    foreach ($chunks as $chunk) {
-        $ratesData = getRatesForHotels($chunk, $checkInFormatted, $checkOutFormatted, $occupancy, $guestNationality, $currency);
-        $allRatesData = array_merge($allRatesData, $ratesData);
-        if (count($chunks) > 1) {
-            usleep(100000); // Pause 0.1s entre les lots
-        }
-    }
-    
+    $allRatesData = getRatesForHotels($hotelIds, $checkInFormatted, $checkOutFormatted, $occupancy, $guestNationality, $currency);
     if (empty($allRatesData)) return [];
 
-    // ÉTAPE 3: Fusionner les données
+    // Fusionner les données
     $results = [];
     foreach ($hotelsData as $hotel) {
         $hotelId = $hotel['id'];
         if (!isset($allRatesData[$hotelId])) continue;
         
         $rate = $allRatesData[$hotelId];
-        
         $results[] = [
             'id' => $hotelId,
             'name' => $hotel['name'],
@@ -361,12 +440,12 @@ function searchHotelsLiteAPI($city, $checkIn, $checkOut, $adults = 1, $childrenA
     return $results;
 }
 
-function getHotelsFromDataAPI($countryCode, $cityName, $limit = 500) {
+function getHotelsFromDataAPI($countryCode, $cityName, $limit = 1500) {
     global $liteapi_search_base_url;
     
     $allHotels = [];
     $offset = 0;
-    $pageSize = min($limit, 200); // 200 par page max
+    $pageSize = min($limit, 200);
     
     while ($offset < $limit) {
         $currentLimit = min($pageSize, $limit - $offset);
@@ -380,7 +459,6 @@ function getHotelsFromDataAPI($countryCode, $cityName, $limit = 500) {
         ];
 
         $url = rtrim($liteapi_search_base_url, '/') . '/data/hotels?' . http_build_query($params);
-        
         $response = liteAPIRequest($url, 'GET');
         
         if (!empty($response['error'])) break;
@@ -391,8 +469,6 @@ function getHotelsFromDataAPI($countryCode, $cityName, $limit = 500) {
         foreach ($rows as $hotel) {
             $hotelId = $hotel['hotelId'] ?? ($hotel['id'] ?? null);
             if (!$hotelId) continue;
-            
-            // Éviter les doublons
             if (isset($allHotels[$hotelId])) continue;
             
             $stars = 0;
@@ -414,14 +490,8 @@ function getHotelsFromDataAPI($countryCode, $cityName, $limit = 500) {
         }
         
         $offset += $currentLimit;
-        
-        // Si on a moins de résultats que demandé, c'est fini
         if (count($rows) < $currentLimit) break;
-        
-        // Pause pour ne pas surcharger l'API
-        if ($offset < $limit) {
-            usleep(100000); // 0.1 seconde
-        }
+        if ($offset < $limit) usleep(100000);
     }
     
     $results = array_values($allHotels);
@@ -434,6 +504,8 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
     
     if (empty($hotelIds)) return [];
     
+    $hotelIds = array_slice($hotelIds, 0, 50);
+    
     $payload = [
         'hotelIds' => $hotelIds,
         'checkin' => $checkIn,
@@ -441,53 +513,50 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
         'currency' => strtoupper($currency),
         'guestNationality' => strtoupper($guestNationality),
         'occupancies' => [$occupancy],
-        'maxRatesPerHotel' => 20
-        // includeHotelData retiré pour performance (déjà récupéré via Data API)
+        'maxRatesPerHotel' => 5
     ];
 
     $url = rtrim($liteapi_search_base_url, '/') . '/hotels/rates';
     
-    $response = liteAPIRequest($url, 'POST', $payload);
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'X-API-Key: ' . $GLOBALS['liteapi_private_key'],
+        'Accept: application/json',
+        'Content-Type: application/json'
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     
-    if (!empty($response['error'])) {
-        error_log("Rates API Error: " . json_encode($response));
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+    
+    if ($curlError || $httpCode !== 200) {
+        error_log("Rates API Error: $curlError (HTTP $httpCode)");
         return [];
     }
     
-    $items = $response['data'] ?? [];
-    if (!is_array($items) || empty($items)) {
-        error_log("No data in rates response");
-        return [];
-    }
+    $responseData = json_decode($response, true);
+    if (empty($responseData['data'])) return [];
 
     $nights = (strtotime($checkOut) - strtotime($checkIn)) / 86400;
     $nights = max(1, (int)$nights);
     
     $rates = [];
-    foreach ($items as $item) {
+    foreach ($responseData['data'] as $item) {
         $hotelId = $item['hotelId'] ?? null;
         if (!$hotelId) continue;
 
         $allRates = [];
         
         foreach (($item['roomTypes'] ?? []) as $roomType) {
-            // Récupération des images de la chambre
-            $roomImages = [];
-            
-            if (isset($roomType['images']) && is_array($roomType['images'])) {
-                foreach ($roomType['images'] as $img) {
-                    $url = $img['url'] ?? $img['main_photo'] ?? $img['thumbnail'] ?? '';
-                    if (!empty($url)) $roomImages[] = $url;
-                }
-            }
-            
-            if (isset($roomType['photos']) && is_array($roomType['photos'])) {
-                foreach ($roomType['photos'] as $img) {
-                    $url = $img['url'] ?? $img['main_photo'] ?? $img['thumbnail'] ?? '';
-                    if (!empty($url)) $roomImages[] = $url;
-                }
-            }
-            
             foreach (($roomType['rates'] ?? []) as $rate) {
                 $totalAmount = null;
                 if (isset($rate['retailRate']['total'][0]['amount'])) {
@@ -497,49 +566,16 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
                 }
                 
                 if ($totalAmount && $totalAmount > 0) {
-                    $boardType = $rate['boardType'] ?? null;
-                    $boardName = $rate['boardName'] ?? null;
-                    $perks = $rate['perks'] ?? [];
-                    $roomName = $rate['name'] ?? 'Chambre';
-                    
-                    $breakfastIncluded = false;
-                    if (in_array($boardType, ['BB', 'BI', 'HB', 'FB'], true)) {
-                        $breakfastIncluded = true;
-                    } elseif (is_string($boardName) && stripos($boardName, 'breakfast') !== false) {
-                        $breakfastIncluded = true;
-                    }
-                    
-                    $isRefundable = false;
-                    $refundableTag = $rate['cancellationPolicies']['refundableTag'] ?? '';
-                    $isRefundable = $refundableTag === 'RFN';
-                    
-                    $maxOccupancy = $rate['maxOccupancy'] ?? 2;
-                    
-                    $bedType = 'Lit standard';
-                    $roomNameLower = strtolower($roomName);
-                    if (strpos($roomNameLower, 'king') !== false) $bedType = 'Lit King Size';
-                    elseif (strpos($roomNameLower, 'queen') !== false) $bedType = 'Lit Queen Size';
-                    elseif (strpos($roomNameLower, 'double') !== false) $bedType = 'Lit Double';
-                    elseif (strpos($roomNameLower, 'single') !== false) $bedType = 'Lit Simple';
-                    elseif (strpos($roomNameLower, 'twin') !== false) $bedType = 'Lits Jumeaux';
-                    
-                    $roomData = [
+                    $allRates[] = [
                         'price' => $totalAmount,
                         'price_per_night' => round($totalAmount / $nights, 2),
                         'offer_id' => $rate['offerId'] ?? null,
-                        'room_name' => $roomName,
-                        'board_type' => $boardType,
-                        'board_name' => $boardName,
-                        'breakfast_included' => $breakfastIncluded,
-                        'perks' => $perks,
-                        'max_occupancy' => $maxOccupancy,
-                        'refundable' => $isRefundable,
-                        'bed_type' => $bedType,
-                        'description' => $rate['description'] ?? $roomType['description'] ?? '',
-                        'images' => $roomImages
+                        'room_name' => $rate['name'] ?? 'Chambre',
+                        'board_type' => $rate['boardType'] ?? null,
+                        'board_name' => $rate['boardName'] ?? null,
+                        'breakfast_included' => in_array($rate['boardType'] ?? '', ['BB', 'BI', 'HB', 'FB']),
+                        'perks' => $rate['perks'] ?? []
                     ];
-                    
-                    $allRates[] = $roomData;
                 }
             }
         }
@@ -550,11 +586,9 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
 
         if (!empty($allRates)) {
             $bestRate = $allRates[0];
-            
             $rates[$hotelId] = [
                 'price_per_night' => $bestRate['price_per_night'],
                 'total_price' => $bestRate['price'],
-                'nights' => $nights,
                 'offer_id' => $bestRate['offer_id'],
                 'room_name' => $bestRate['room_name'],
                 'board_type' => $bestRate['board_type'],
@@ -566,7 +600,7 @@ function getRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guestNat
         }
     }
     
-    error_log("getRatesForHotels: Rates found for " . count($rates) . " hotels");
+    error_log("getRatesForHotels: " . count($rates) . " hotels with rates");
     return $rates;
 }
 
@@ -576,7 +610,6 @@ function getMinRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guest
     
     if (empty($hotelIds)) return [];
     
-    // Limiter à 200 pour la recherche de prix minimum (plus rapide)
     $hotelIds = array_slice($hotelIds, 0, 200);
     
     $payload = [
@@ -589,7 +622,6 @@ function getMinRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guest
     ];
 
     $url = rtrim($liteapi_search_base_url, '/') . '/hotels/min-rates';
-    
     $response = liteAPIRequest($url, 'POST', $payload);
     
     if (!empty($response['error'])) return [];
@@ -611,7 +643,6 @@ function getMinRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guest
         
         foreach (($item['roomTypes'] ?? []) as $roomType) {
             foreach (($roomType['rates'] ?? []) as $rate) {
-                // Structure différente pour min-rates
                 $amount = $rate['rate']['amount'] ?? $rate['total']['amount'] ?? null;
                 if ($amount && ($minPrice === null || $amount < $minPrice)) {
                     $minPrice = (float)$amount;
@@ -635,7 +666,6 @@ function getMinRatesForHotels($hotelIds, $checkIn, $checkOut, $occupancy, $guest
     error_log("getMinRatesForHotels: " . count($rates) . " hotels with min rates");
     return $rates;
 }
-
 // ==================== RÉCUPÉRATION DES IMAGES DE L'HÔTEL ====================
 function getHotelImages($hotelId) {
     global $liteapi_search_base_url;
@@ -643,7 +673,6 @@ function getHotelImages($hotelId) {
     if (empty($hotelId)) return [];
     
     $url = rtrim($liteapi_search_base_url, '/') . "/data/hotel?hotelId=" . urlencode($hotelId) . "&language=fr";
-    
     $response = liteAPIRequest($url, 'GET');
     
     if (!empty($response['error'])) {
@@ -661,7 +690,6 @@ function getHotelImages($hotelId) {
         'all_photos' => []
     ];
     
-    // Récupérer la photo principale
     if (isset($hotelData['mainPhoto'])) {
         $images['main_photo'] = $hotelData['mainPhoto'];
     } elseif (isset($hotelData['main_photo'])) {
@@ -670,9 +698,7 @@ function getHotelImages($hotelId) {
         $images['main_photo'] = $hotelData['thumbnail'];
     }
     
-    // Récupérer toutes les photos
     $photos = [];
-    
     if (isset($hotelData['photos']) && is_array($hotelData['photos'])) {
         $photos = $hotelData['photos'];
     } elseif (isset($hotelData['images']) && is_array($hotelData['images'])) {
@@ -713,10 +739,8 @@ function getHotelImages($hotelId) {
                 $category = strtolower(implode(' ', $photo['tags']));
             }
             
-            if (strpos($category, 'room') !== false || 
-                strpos($category, 'chambre') !== false ||
-                strpos($category, 'bed') !== false ||
-                strpos($category, 'lit') !== false) {
+            if (strpos($category, 'room') !== false || strpos($category, 'chambre') !== false ||
+                strpos($category, 'bed') !== false || strpos($category, 'lit') !== false) {
                 $images['room_photos'][] = $url;
             } else {
                 $images['hotel_photos'][] = $url;
@@ -743,7 +767,6 @@ function getHotelDetails($hotelId) {
     if (empty($hotelId)) return [];
     
     $url = rtrim($liteapi_search_base_url, '/') . "/data/hotel?hotelId=" . urlencode($hotelId) . "&language=fr";
-    
     $response = liteAPIRequest($url, 'GET');
     
     if (!empty($response['error'])) {
@@ -799,6 +822,7 @@ function bookRate($prebookId, array $holder, array $guests, $paymentMethod = 'AC
 
     return liteAPIRequest($url, 'POST', $payload);
 }
+
 // ==================== SERVICE VOITURES ====================
 function searchCars($city, $rental_type, $car_type, $transmission) {
     $cars = [
@@ -887,19 +911,15 @@ function getPackages() {
         }
         if(!is_array($hotelImagesTerrasse)) $hotelImagesTerrasse = [];
         
-        // ✅ Utiliser UNIQUEMENT l'ID de Supabase
-        // Si l'ID est vide ou null, on log une erreur mais on ne génère pas d'ID
         $packageId = $item['id'] ?? null;
         
         if(empty($packageId)) {
-            // ⚠️ Log d'erreur car un package sans ID ne devrait pas exister
             error_log("ERREUR: Package sans ID dans Supabase: " . print_r($item, true));
-            // On ignore ce package ou on met un ID temporaire
-            continue; // Ou $packageId = 'MISSING_ID_' . uniqid();
+            continue;
         }
         
         $formatted[] = [
-            'id' => $packageId,  // ← ID original de Supabase
+            'id' => $packageId,
             'name' => $item['nom'] ?? 'Package sans nom',
             'destination' => $item['destination'] ?? '',
             'duration_nights' => intval($item['duree_nuits'] ?? 0),
@@ -1001,11 +1021,66 @@ function testLiteAPIConnection() {
     return ['success' => true, 'message' => 'Connexion OK'];
 }
 
-// ==================== CONNEXION PDO ====================
-try {
-    $pdo = new PDO("mysql:host=localhost;dbname=terra_voyage;charset=utf8", 'root', '');
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    error_log("MySQL connection error: " . $e->getMessage());
+// ==================== ENDPOINT AUTOCOMPLETION ====================
+
+if (isset($_GET['action']) && $_GET['action'] === 'autocomplete' && isset($_GET['query'])) {
+    header('Content-Type: application/json');
+    header('Access-Control-Allow-Origin: *');
+    
+    $query = $_GET['query'];
+    $results = [];
+    
+    // Recherche dans air_destinations
+    $endpoint = "air_destinations?select=iata_code,name,city,country&city=ilike.*" . urlencode($query) . "*&limit=10";
+    $data = supabaseRequest($endpoint);
+    
+    if (!empty($data)) {
+        foreach ($data as $item) {
+            if (!empty($item['iata_code'])) {
+                $display = $item['iata_code'] . ' - ' . ($item['name'] ?? $item['city']);
+                if (!empty($item['city']) && $item['city'] != ($item['name'] ?? '')) {
+                    $display .= ' (' . $item['city'] . ')';
+                }
+                $results[] = [
+                    'type' => 'airport',
+                    'code' => $item['iata_code'],
+                    'name' => $item['name'] ?? $item['city'],
+                    'city' => $item['city'] ?? '',
+                    'country' => $item['country'] ?? '',
+                    'display' => $display,
+                    'value' => $item['iata_code']
+                ];
+            }
+        }
+    }
+    
+    // Si pas de résultats, ajouter la ville comme suggestion
+    if (empty($results)) {
+        $results[] = [
+            'type' => 'city',
+            'name' => ucfirst($query),
+            'city' => ucfirst($query),
+            'display' => ucfirst($query) . ' (Ville)',
+            'value' => ucfirst($query)
+        ];
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'query' => $query,
+        'results' => array_slice($results, 0, 10)
+    ]);
+    exit;
 }
+
+// ==================== CONNEXION PDO ====================
+// SUPPRIMÉ - Utilisation de Supabase uniquement
+// try {
+//     $pdo = new PDO("mysql:host=localhost;dbname=terra_voyage;charset=utf8", 'root', '');
+//     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+// } catch(PDOException $e) {
+//     error_log("MySQL connection error: " . $e->getMessage());
+// }
+
+// ==================== FIN ====================
 ?>
