@@ -76,43 +76,21 @@ function duffelRequest($endpoint, $method = 'GET', $data = null) {
 
 // ==================== SERVICE VOLS ====================
 function getAirportCode($city) {
+    // Charger le mapping
+    require_once __DIR__ . '/city_mapping.php';
+    
     $city = trim(preg_replace('/[^a-zA-Z\s\-]/', '', $city));
     if (empty($city)) return null;
     
-    $cityLower = strtolower($city);
-    
-    // 1. Essayer via la table air_destinations
-    $endpoint = "air_destinations?select=iata_code&city=ilike.*" . urlencode($cityLower) . "*&limit=1";
-    $data = supabaseRequest($endpoint);
-    
-    if (!empty($data) && isset($data[0]['iata_code'])) {
-        error_log("getAirportCode: Trouvé via air_destinations - $city -> " . $data[0]['iata_code']);
-        return $data[0]['iata_code'];
+    // 1. Essayer via le mapping local
+    $code = getAirportCodeFromMapping($city);
+    if ($code) {
+        error_log("getAirportCode: Trouvé via mapping local - $city -> $code");
+        return $code;
     }
     
-    // 2. Mapping statique de fallback
-    $codes = [
-        'kinshasa' => 'FIH', 'lubumbashi' => 'FBM', 'goma' => 'GOM',
-        'kisangani' => 'FKI', 'mbuji-mayi' => 'MJM', 'bukavu' => 'BKY',
-        'matadi' => 'MAT', 'bandundu' => 'FDU', 'kananga' => 'KGA',
-        'paris' => 'CDG', 'nairobi' => 'NBO', 'addis ababa' => 'ADD',
-        'johannesburg' => 'JNB', 'bruxelles' => 'BRU', 'dubai' => 'DXB',
-        'zanzibar' => 'ZNZ', 'londres' => 'LHR', 'london' => 'LHR',
-        'new york' => 'JFK', 'los angeles' => 'LAX', 'chicago' => 'ORD',
-        'miami' => 'MIA', 'las vegas' => 'LAS', 'san francisco' => 'SFO',
-        'bangkok' => 'BKK', 'singapore' => 'SIN', 'hong kong' => 'HKG',
-        'tokyo' => 'NRT', 'seoul' => 'ICN', 'beijing' => 'PEK',
-        'shanghai' => 'PVG', 'mumbai' => 'BOM', 'delhi' => 'DEL',
-        'sydney' => 'SYD', 'melbourne' => 'MEL', 'auckland' => 'AKL'
-    ];
-    
-    if (isset($codes[$cityLower])) {
-        error_log("getAirportCode: Trouvé dans mapping - $city -> " . $codes[$cityLower]);
-        return $codes[$cityLower];
-    }
-    
-    // 3. Fallback générique
-    $fallback = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $cityLower), 0, 3));
+    // 2. Fallback sur les 3 premières lettres
+    $fallback = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $city), 0, 3));
     error_log("getAirportCode: Non trouvé pour '$city', fallback: $fallback");
     return $fallback;
 }
