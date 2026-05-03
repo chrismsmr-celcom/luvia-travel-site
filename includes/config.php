@@ -1027,41 +1027,153 @@ if (isset($_GET['action']) && $_GET['action'] === 'autocomplete' && isset($_GET[
     header('Content-Type: application/json');
     header('Access-Control-Allow-Origin: *');
     
-    $query = $_GET['query'];
+    $query = trim($_GET['query']);
     $results = [];
+    $queryUpper = strtoupper($query);
+    $queryLower = strtolower($query);
     
-    // Recherche dans air_destinations
-    $endpoint = "air_destinations?select=iata_code,name,city,country&city=ilike.*" . urlencode($query) . "*&limit=10";
-    $data = supabaseRequest($endpoint);
+    // Mapping français -> anglais pour la recherche
+    $frenchToEnglish = [
+        'londres' => 'london', 'new york' => 'new york', 'los angeles' => 'los angeles',
+        'san francisco' => 'san francisco', 'las vegas' => 'las vegas', 'hong kong' => 'hong kong',
+        'buenos aires' => 'buenos aires', 'rio de janeiro' => 'rio de janeiro',
+        'saint pétersbourg' => 'st petersburg', 'moscou' => 'moscow', 'vienne' => 'vienna',
+        'copenhague' => 'copenhagen', 'prague' => 'prague', 'budapest' => 'budapest',
+        'varsovie' => 'warsaw', 'athènes' => 'athens', 'dubaï' => 'dubai', 'le caire' => 'cairo',
+        'kinshasa' => 'kinshasa', 'lubumbashi' => 'lubumbashi', 'goma' => 'goma',
+        'zanzibar' => 'zanzibar', 'marrakech' => 'marrakech', 'casablanca' => 'casablanca'
+    ];
     
-    if (!empty($data)) {
-        foreach ($data as $item) {
-            if (!empty($item['iata_code'])) {
-                $display = $item['iata_code'] . ' - ' . ($item['name'] ?? $item['city']);
-                if (!empty($item['city']) && $item['city'] != ($item['name'] ?? '')) {
-                    $display .= ' (' . $item['city'] . ')';
+    // 1. Recherche par code IATA (dans iata_code)
+    if (strlen($query) <= 4 && ctype_alpha($query)) {
+        $endpoint = "air_destinations?select=iata_code,name,city,country&iata_code=eq." . $queryUpper . "&limit=5";
+        $data = supabaseRequest($endpoint);
+        
+        if (!empty($data)) {
+            foreach ($data as $item) {
+                $airportName = htmlspecialchars($item['name'] ?? $item['city'] ?? '');
+                $cityName = htmlspecialchars($item['city'] ?? '');
+                $iataCode = htmlspecialchars($item['iata_code']);
+                
+                $display = '<span class="main-name">' . $iataCode . ' - ' . $airportName . '</span>';
+                if (!empty($cityName) && $cityName != $airportName) {
+                    $display .= ' <span class="city-name" data-city="' . $cityName . '">(' . $cityName . ')</span>';
                 }
+                
                 $results[] = [
                     'type' => 'airport',
-                    'code' => $item['iata_code'],
-                    'name' => $item['name'] ?? $item['city'],
-                    'city' => $item['city'] ?? '',
+                    'code' => $iataCode,
+                    'name' => $airportName,
+                    'city' => $cityName,
                     'country' => $item['country'] ?? '',
                     'display' => $display,
-                    'value' => $item['iata_code']
+                    'value' => $iataCode
                 ];
             }
         }
     }
     
-    // Si pas de résultats, ajouter la ville comme suggestion
+    // 2. Recherche par ville (en français et anglais)
+    $searchTerms = [$queryLower];
+    if (isset($frenchToEnglish[$queryLower])) {
+        $searchTerms[] = $frenchToEnglish[$queryLower];
+    }
+    
+    foreach ($searchTerms as $term) {
+        $endpoint = "air_destinations?select=iata_code,name,city,country&city=ilike.*" . urlencode($term) . "*&limit=10";
+        $data = supabaseRequest($endpoint);
+        
+        if (!empty($data)) {
+            foreach ($data as $item) {
+                if (!empty($item['iata_code'])) {
+                    $airportName = htmlspecialchars($item['name'] ?? $item['city'] ?? '');
+                    $cityName = htmlspecialchars($item['city'] ?? '');
+                    $iataCode = htmlspecialchars($item['iata_code']);
+                    
+                    // Vérifier si on a déjà ce résultat
+                    $exists = false;
+                    foreach ($results as $existing) {
+                        if ($existing['code'] === $iataCode) {
+                            $exists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$exists) {
+                        $display = '<span class="main-name">' . $iataCode . ' - ' . $airportName . '</span>';
+                        if (!empty($cityName) && $cityName != $airportName) {
+                            $display .= ' <span class="city-name" data-city="' . $cityName . '">(' . $cityName . ')</span>';
+                        }
+                        
+                        $results[] = [
+                            'type' => 'airport',
+                            'code' => $iataCode,
+                            'name' => $airportName,
+                            'city' => $cityName,
+                            'country' => $item['country'] ?? '',
+                            'display' => $display,
+                            'value' => $iataCode
+                        ];
+                    }
+                }
+            }
+        }
+    }
+    
+    // 3. Recherche par nom d'aéroport direct
+    if (count($results) < 5) {
+        $endpoint = "air_destinations?select=iata_code,name,city,country&name=ilike.*" . urlencode($query) . "*&limit=" . (10 - count($results));
+        $data = supabaseRequest($endpoint);
+        
+        if (!empty($data)) {
+            foreach ($data as $item) {
+                if (!empty($item['iata_code'])) {
+                    $airportName = htmlspecialchars($item['name'] ?? $item['city'] ?? '');
+                    $cityName = htmlspecialchars($item['city'] ?? '');
+                    $iataCode = htmlspecialchars($item['iata_code']);
+                    
+                    $exists = false;
+                    foreach ($results as $existing) {
+                        if ($existing['code'] === $iataCode) {
+                            $exists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$exists) {
+                        $display = '<span class="main-name">' . $iataCode . ' - ' . $airportName . '</span>';
+                        if (!empty($cityName) && $cityName != $airportName) {
+                            $display .= ' <span class="city-name" data-city="' . $cityName . '">(' . $cityName . ')</span>';
+                        }
+                        
+                        $results[] = [
+                            'type' => 'airport',
+                            'code' => $iataCode,
+                            'name' => $airportName,
+                            'city' => $cityName,
+                            'country' => $item['country'] ?? '',
+                            'display' => $display,
+                            'value' => $iataCode
+                        ];
+                    }
+                }
+            }
+        }
+    }
+    
+    // 4. Si toujours pas de résultats, ajouter la ville comme suggestion
     if (empty($results)) {
+        $cityName = htmlspecialchars(ucfirst($query));
+        $englishName = isset($frenchToEnglish[$queryLower]) ? ucfirst($frenchToEnglish[$queryLower]) : $cityName;
+        
+        $display = '<span class="main-name">' . $cityName . '</span> <span class="city-name" data-city="' . $englishName . '">(' . $englishName . ')</span>';
+        
         $results[] = [
             'type' => 'city',
-            'name' => ucfirst($query),
-            'city' => ucfirst($query),
-            'display' => ucfirst($query) . ' (Ville)',
-            'value' => ucfirst($query)
+            'name' => $cityName,
+            'city' => $englishName,
+            'display' => $display,
+            'value' => $cityName
         ];
     }
     
