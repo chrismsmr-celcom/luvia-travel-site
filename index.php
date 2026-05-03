@@ -1,3 +1,40 @@
+<?php 
+require_once 'includes/config.php'; 
+require_once 'includes/header.php'; 
+set_time_limit(60);
+// Récupérer la devise choisie
+$selectedCurrency = $_COOKIE['selected_currency'] ?? 'USD';
+
+// Fonction helper pour afficher les prix convertis
+function displayPrice($priceInUSD) {
+    global $selectedCurrency;
+    return formatPrice($priceInUSD, $selectedCurrency);
+}
+
+$today = date('Y-m-d');
+?>
+<style>
+/* Styles pour l'autocomplétion */
+.autocomplete-results {
+    position: absolute;
+    z-index: 9999;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    min-width: 250px;
+}
+
+.autocomplete-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.autocomplete-item:hover {
+    background-color: #f3f4f6;
 }
 
 .autocomplete-item.selected {
