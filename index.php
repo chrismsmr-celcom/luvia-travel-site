@@ -1,19 +1,12 @@
-<?php 
-require_once 'includes/config.php'; 
-require_once 'includes/header.php'; 
-set_time_limit(60);
-// Récupérer la devise choisie
-$selectedCurrency = $_COOKIE['selected_currency'] ?? 'USD';
-
-// Fonction helper pour afficher les prix convertis
-function displayPrice($priceInUSD) {
-    global $selectedCurrency;
-    return formatPrice($priceInUSD, $selectedCurrency);
 }
 
-$today = date('Y-m-d');
-?>
-<style>
+.autocomplete-item.selected {
+    background-color: #eff6ff;
+}
+
+.relative {
+    position: relative;
+}
 .destination-card {
     transition: all 0.3s ease;
 }
@@ -126,6 +119,7 @@ $today = date('Y-m-d');
 
 <!-- ==================== VERSION DESKTOP ==================== -->
 <div class="desktop-only">
+
     <section class="relative h-screen flex items-center justify-center overflow-hidden">
         <div id="hero-slider" class="absolute top-0 left-0 w-full h-full">
             <div class="slide absolute top-0 left-0 w-full h-full opacity-0 transition-opacity duration-1000"><img src="https://images.unsplash.com/photo-1494500764479-0c8f2919a3d8?w=1920" class="w-full h-full object-cover"></div>
@@ -165,8 +159,8 @@ $today = date('Y-m-d');
                             
                             <div id="roundtrip-fields-desktop">
                                 <div class="flex flex-row items-stretch gap-0">
-                                    <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Départ</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><input type="text" name="origin" placeholder="Ville de départ" class="w-full border-none focus:ring-0 outline-none text-sm"></div></div></div>
-                                    <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Arrivée</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4-3-9s1.34-9 3-9"/></svg><input type="text" name="destination" placeholder="Ville d'arrivée" class="w-full border-none focus:ring-0 outline-none text-sm"></div></div></div>
+                                    <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Départ</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><input type="text" name="origin" placeholder="Ville de départ" autocomplete="off" class="w-full border-none focus:ring-0 outline-none text-sm"></div></div></div>
+                                    <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Arrivée</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4-3-9s1.34-9 3-9"/></svg><input type="text" name="destination" placeholder="Ville d'arrivée" autocomplete="off" class="w-full border-none focus:ring-0 outline-none text-sm"></div></div></div>
                                     <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Départ</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><input type="date" name="departure_date" min="<?php echo $today; ?>" value="<?php echo $today; ?>" class="w-full border-none focus:ring-0 outline-none text-sm"></div></div></div>
                                     <div class="flex-1 border-r" id="desktop-return-date"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Retour</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><input type="date" name="return_date" min="<?php echo $today; ?>" class="w-full border-none focus:ring-0 outline-none text-sm"></div></div></div>
                                     
@@ -200,7 +194,7 @@ $today = date('Y-m-d');
                                     <label class="text-xs font-semibold text-gray-500 uppercase">Destination</label>
                                     <div class="flex items-center gap-2 mt-1">
                                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                                        <input type="text" name="city" placeholder="Ville ou hôtel" class="w-full border-none outline-none text-sm" required>
+                                        <input type="text" name="city" placeholder="Ville ou hôtel" autocomplete="off" class="w-full border-none outline-none text-sm" required>
                                     </div>
                                 </div>
                             </div>
@@ -250,7 +244,7 @@ $today = date('Y-m-d');
                     <div id="cars-content-desktop" class="tab-content-desktop hidden p-5">
                         <form action="search.php" method="GET" class="flex flex-row items-stretch gap-0">
                             <input type="hidden" name="type" value="car">
-                            <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Lieu</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg><input type="text" name="city" placeholder="Ville" class="w-full border-none outline-none text-sm"></div></div></div>
+                            <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Lieu</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg><input type="text" name="city" placeholder="Ville" autocomplete="off" class="w-full border-none outline-none text-sm"></div></div></div>
                             <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Prise en charge</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><input type="date" name="pickup_date" min="<?php echo $today; ?>" value="<?php echo $today; ?>" class="w-full border-none outline-none text-sm"></div></div></div>
                             <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Retour</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><input type="date" name="return_date" min="<?php echo $today; ?>" class="w-full border-none outline-none text-sm"></div></div></div>
                             <div class="flex-1 border-r"><div class="p-3"><label class="text-xs font-semibold text-gray-500 uppercase">Type</label><div class="flex items-center gap-2 mt-1"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg><select name="rental_type" class="w-full border-none outline-none text-sm bg-transparent"><option value="self">Voiture simple</option><option value="chauffeur_only">Avec chauffeur</option><option value="chauffeur_fuel">Chauffeur + fuel</option></select></div></div></div>
@@ -271,7 +265,7 @@ $today = date('Y-m-d');
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    <input type="text" name="destination" placeholder="Ex: Kinshasa, Paris, Dubai" class="w-full border-none outline-none text-sm" required>
+                    <input type="text" name="destination" placeholder="Ex: Kinshasa, Paris, Dubai" autocomplete="off" class="w-full border-none outline-none text-sm" required>
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Recherche par ville ou pays</p>
             </div>
@@ -412,8 +406,8 @@ $today = date('Y-m-d');
             <form action="search.php" method="GET">
                 <input type="hidden" name="type" value="flight">
                 <div class="mobile-radio-group"><span class="mobile-radio active" data-trip="roundtrip">Aller-retour</span><span class="mobile-radio" data-trip="oneway">Aller simple</span></div>
-                <div class="mobile-field"><div class="flex items-center"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><input type="text" name="origin" placeholder="Départ" class="w-full"></div></div>
-                <div class="mobile-field"><div class="flex items-center"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4-3-9s1.34-9 3-9"/></svg><input type="text" name="destination" placeholder="Arrivée" class="w-full"></div></div>
+                <div class="mobile-field"><div class="flex items-center"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><input type="text" name="origin" placeholder="Départ" autocomplete="off" class="w-full"></div></div>
+                <div class="mobile-field"><div class="flex items-center"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4-3-9s1.34-9 3-9"/></svg><input type="text" name="destination" placeholder="Arrivée" autocomplete="off" class="w-full"></div></div>
                 <div class="mobile-field"><div class="flex items-center"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><input type="date" name="departure_date" min="<?php echo $today; ?>" class="w-full"></div></div>
                 <div id="mobile-return-date" class="mobile-field"><div class="flex items-center"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><input type="date" name="return_date" min="<?php echo $today; ?>" class="w-full"></div></div>
                 
@@ -436,7 +430,7 @@ $today = date('Y-m-d');
             <form action="search.php" method="GET">
                 <input type="hidden" name="type" value="hotel">
                 <div class="mobile-field">
-                    <input type="text" name="city" placeholder="Destination" class="w-full" required>
+                    <input type="text" name="city" placeholder="Destination" autocomplete="off" class="w-full" required>
                 </div>
                 <div class="mobile-field">
                     <input type="date" name="check_in" min="<?php echo $today; ?>" class="w-full" required>
@@ -458,7 +452,7 @@ $today = date('Y-m-d');
         <div id="mobile-cars" class="mobile-tab-content hidden">
             <form action="search.php" method="GET">
                 <input type="hidden" name="type" value="car">
-                <div class="mobile-field"><input type="text" name="city" placeholder="Ville" class="w-full"></div>
+                <div class="mobile-field"><input type="text" name="city" placeholder="Ville" autocomplete="off" class="w-full"></div>
                 <div class="mobile-field"><input type="date" name="pickup_date" min="<?php echo $today; ?>" class="w-full"></div>
                 <div class="mobile-field"><input type="date" name="return_date" min="<?php echo $today; ?>" class="w-full"></div>
                 <button type="submit" class="search-btn-mobile">RECHERCHER</button>
@@ -707,8 +701,8 @@ function addMultiCityDesktop() {
     if (!container) return;
     const newDiv = document.createElement('div');
     newDiv.className = 'multicity-item border rounded-xl p-4 mb-3';
-    newDiv.innerHTML = `<div class="flex justify-between mb-2"><span>Trajet ${window.multiCount}</span><button type="button" class="remove-multicity-desktop text-red-500 text-sm">Supprimer</button></div><div class="grid grid-cols-3 gap-3"><input type="text" name="multi_origin[]" placeholder="Départ" class="border rounded-lg p-2 text-sm"><input type="text" name="multi_destination[]" placeholder="Arrivée" class="border rounded-lg p-2 text-sm"><input type="date" name="multi_date[]" min="<?php echo $today; ?>" class="border rounded-lg p-2 text-sm"></div>`;
-    container.appendChild(newDiv);
+    newDiv.innerHTML = `<div class="flex justify-between mb-2"><span>Trajet ${window.multiCount}</span><button type="button" class="remove-multicity-desktop text-red-500 text-sm">Supprimer</button></div><div class="grid grid-cols-3 gap-3"><input type="text" name="multi_origin[]" placeholder="Départ" autocomplete="off" class="border rounded-lg p-2 text-sm"><input type="text" name="multi_destination[]" placeholder="Arrivée" autocomplete="off" class="border rounded-lg p-2 text-sm"><input type="date" name="multi_date[]" min="<?php echo $today; ?>" class="border rounded-lg p-2 text-sm"></div>`;
+        container.appendChild(newDiv);
     const removeBtn = newDiv.querySelector('.remove-multicity-desktop');
     if (removeBtn) {
         removeBtn.addEventListener('click', () => {
@@ -894,6 +888,240 @@ const dateObserver = new MutationObserver(function(mutations) {
 dateObserver.observe(document.body, { childList: true, subtree: true });
 
 console.log('Luvia - Site chargé avec succès');
+class CityAutocomplete {
+    constructor(inputElement, options = {}) {
+        this.input = inputElement;
+        this.options = {
+            minChars: 2,
+            delay: 300,
+            maxResults: 10,
+            ...options
+        };
+        
+        this.currentRequest = null;
+        this.resultsContainer = null;
+        this.selectedIndex = -1;
+        
+        this.init();
+    }
+    
+    init() {
+        // Créer le conteneur des résultats
+        this.resultsContainer = document.createElement('div');
+        this.resultsContainer.className = 'autocomplete-results hidden';
+        
+        // S'assurer que le parent a position relative
+        if (getComputedStyle(this.input.parentElement).position !== 'relative') {
+            this.input.parentElement.style.position = 'relative';
+        }
+        this.input.parentElement.appendChild(this.resultsContainer);
+        
+        // Événements
+        this.input.addEventListener('input', (e) => this.onInput(e));
+        this.input.addEventListener('keydown', (e) => this.onKeyDown(e));
+        this.input.addEventListener('blur', (e) => this.onBlur(e));
+    }
+    
+    onInput(event) {
+        const query = event.target.value.trim();
+        
+        if (query.length < this.options.minChars) {
+            this.hideResults();
+            return;
+        }
+        
+        clearTimeout(this.debounceTimeout);
+        this.debounceTimeout = setTimeout(() => this.search(query), this.options.delay);
+    }
+    
+    async search(query) {
+        if (this.currentRequest) {
+            this.currentRequest.abort();
+        }
+        
+        this.currentRequest = new AbortController();
+        
+        try {
+            const response = await fetch(`includes/config.php?action=autocomplete&query=${encodeURIComponent(query)}`, {
+                signal: this.currentRequest.signal
+            });
+            const data = await response.json();
+            
+            if (data.success && data.results) {
+                this.displayResults(data.results);
+            } else {
+                this.hideResults();
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Autocomplete error:', error);
+            }
+        } finally {
+            this.currentRequest = null;
+        }
+    }
+    
+    displayResults(results) {
+        if (results.length === 0) {
+            this.hideResults();
+            return;
+        }
+        
+        this.resultsContainer.innerHTML = '';
+        this.selectedIndex = -1;
+        
+        results.slice(0, this.options.maxResults).forEach((result, index) => {
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+            item.innerHTML = result.display;
+            item.dataset.value = result.value;
+            item.dataset.city = result.city || result.value;
+            item.dataset.country = result.country || '';
+            item.dataset.type = result.type;
+            
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.selectResult(result);
+            });
+            
+            item.addEventListener('mouseenter', () => {
+                this.selectedIndex = index;
+                this.highlightSelected();
+            });
+            
+            this.resultsContainer.appendChild(item);
+        });
+        
+        this.resultsContainer.classList.remove('hidden');
+    }
+    
+    highlightSelected() {
+        const items = this.resultsContainer.querySelectorAll('.autocomplete-item');
+        items.forEach((item, index) => {
+            if (index === this.selectedIndex) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+        
+        if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
+            items[this.selectedIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+    
+    selectResult(result) {
+        this.input.value = result.value;
+        this.input.dataset.city = result.city || result.value;
+        this.input.dataset.country = result.country || '';
+        this.input.dataset.type = result.type || 'city';
+        this.hideResults();
+        
+        // Déclencher l'événement change
+        this.input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    
+    onKeyDown(event) {
+        const items = this.resultsContainer.querySelectorAll('.autocomplete-item');
+        
+        if (items.length === 0) return;
+        
+        switch (event.key) {
+            case 'ArrowDown':
+                event.preventDefault();
+                this.selectedIndex = Math.min(this.selectedIndex + 1, items.length - 1);
+                this.highlightSelected();
+                break;
+                
+            case 'ArrowUp':
+                event.preventDefault();
+                this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
+                this.highlightSelected();
+                break;
+                
+            case 'Enter':
+                event.preventDefault();
+                if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
+                    const value = items[this.selectedIndex].dataset.value;
+                    const result = {
+                        value: value,
+                        city: items[this.selectedIndex].dataset.city,
+                        country: items[this.selectedIndex].dataset.country,
+                        type: items[this.selectedIndex].dataset.type
+                    };
+                    this.selectResult(result);
+                }
+                break;
+                
+            case 'Escape':
+                this.hideResults();
+                break;
+        }
+    }
+    
+    onBlur(event) {
+        setTimeout(() => {
+            if (!this.resultsContainer.contains(document.activeElement)) {
+                this.hideResults();
+            }
+        }, 200);
+    }
+    
+    hideResults() {
+        this.resultsContainer.classList.add('hidden');
+        this.resultsContainer.innerHTML = '';
+        this.selectedIndex = -1;
+    }
+}
+
+// ==================== INITIALISATION ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser l'autocomplétion sur tous les champs ville
+    const cityInputs = [
+        // Version desktop
+        'input[name="origin"]',
+        'input[name="destination"]', 
+        'input[name="city"]',
+        // Version mobile - vols
+        '#mobile-flights input[name="origin"]',
+        '#mobile-flights input[name="destination"]',
+        // Version mobile - hôtels
+        '#mobile-hotels input[name="city"]',
+        // Version mobile - location
+        '#mobile-cars input[name="city"]',
+        // Version mobile - packages
+        '#mobile-packages input[name="destination"]'
+    ];
+    
+    cityInputs.forEach(selector => {
+        const inputs = document.querySelectorAll(selector);
+        inputs.forEach(input => {
+            if (!input._autocomplete) {
+                input._autocomplete = new CityAutocomplete(input);
+            }
+        });
+    });
+    
+    // Observer pour les champs ajoutés dynamiquement (multi-city)
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1 && node.querySelectorAll) {
+                    const newInputs = node.querySelectorAll('input[name="multi_origin[]"], input[name="multi_destination[]"]');
+                    newInputs.forEach(input => {
+                        if (!input._autocomplete) {
+                            input._autocomplete = new CityAutocomplete(input);
+                        }
+                    });
+                }
+            });
+        });
+    });
+    
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+
+console.log('Autocomplétion chargée avec succès');
 </script>
 
 <!-- Destinations populaires -->
@@ -902,7 +1130,12 @@ console.log('Luvia - Site chargé avec succès');
         <h2 class="text-4xl font-bold text-center text-gray-800 mb-12">Destinations populaires</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <?php $destinations = getDestinations(); foreach($destinations as $destination): ?>
-            <div class="group relative overflow-hidden rounded-2xl shadow-lg cursor-pointer" onclick="window.location.href='<?php if($destination['type'] == 'hotel') { echo 'search.php?type=hotel&city=' . urlencode($destination['city']); } else { echo 'package-detail.php?id=' . $destination['id']; } ?>'">
+            <div class="group relative overflow-hidden rounded-2xl shadow-lg cursor-pointer" 
+     onclick="window.location.href='<?php if($destination['type'] == 'hotel') { 
+         echo 'search.php?type=hotel&city=' . urlencode($destination['city']); 
+     } else { 
+         echo 'package-detail.php?id=' . urlencode($destination['id']); 
+     } ?>'">
                 <img src="<?php echo $destination['image']; ?>" class="w-full h-80 object-cover group-hover:scale-110 transition">
                 <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
                 <div class="absolute bottom-0 left-0 p-6 text-white">
@@ -924,7 +1157,7 @@ console.log('Luvia - Site chargé avec succès');
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <?php $packages = getPackages(); foreach($packages as $package): ?>
-            <div class="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer" onclick="window.location.href='package-detail.php?id=<?php echo $package['id']; ?>'">
+            <div class="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer" onclick="window.location.href='package-detail.php?id=<?php echo urlencode($package['id']); ?>'">
                 <div class="relative h-64 overflow-hidden">
                     <img src="<?php echo $package['image']; ?>" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
